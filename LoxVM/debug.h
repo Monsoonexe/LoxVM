@@ -2,4 +2,4 @@
 #include "chunk.h"
 
 void disassembleChunk(Chunk* chunk, const char* name);
-int disassembleInstruction(Chunk* chunk, int offset);
+uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset);

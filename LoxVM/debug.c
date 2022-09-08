@@ -12,6 +12,24 @@ static uint32_t constantInstruction(const char* name,
 	return offset + 2; // op and index of const
 }
 
+static uint32_t constantLongInstruction(const char* name,
+	Chunk* chunk, uint32_t offset)
+{
+	// decode 3-byte index
+	uint8_t hi = chunk->code[offset + 1];
+	uint8_t mid = chunk->code[offset + 2];
+	uint8_t low = chunk->code[offset + 3];
+
+	// combine
+	uint32_t constantIndex = (hi << 16) | (mid << 8) | (low << 0);
+
+	// print
+	printf("%-16s %4d '", name, constantIndex);
+	printValue(chunk->constants.values[constantIndex]);
+	printf("'\n");
+	return offset + 4; // op and 3 bytes of index
+}
+
 static uint32_t simpleInstruction(const char* name, uint32_t offset)
 {
 	printf("%s\n", name);
@@ -34,7 +52,7 @@ void disassembleChunk(Chunk* chunk, const char* name)
 *	0000  123 OP_CONSTANT         0 '1.2'
 *	0002    | OP_RETURN
 */
-int disassembleInstruction(Chunk* chunk, uint32_t offset)
+uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 {
 	printf("%04d ", offset);
 
@@ -57,6 +75,8 @@ int disassembleInstruction(Chunk* chunk, uint32_t offset)
 	{
 	case OP_CONSTANT:
 		return constantInstruction("OP_CONSTANT", chunk, offset);
+	case OP_CONSTANT_LONG:
+		return constantLongInstruction("OP_CONSTANT_LONG", chunk, offset);
 	case OP_RETURN:
 		return simpleInstruction("OP_RETURN", offset);
 	default:
