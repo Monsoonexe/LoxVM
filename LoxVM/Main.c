@@ -39,8 +39,8 @@ int32_t main(int argc, char* args[])
 	writeChunk(&chunk, constIndex, lineNumber);
 	writeChunk(&chunk, OP_NEGATE, lineNumber);
 	//writeConstant(&chunk, 99.2, lineNumber);
-	writeChunk(&chunk, OP_RETURN, lineNumber);
-	//writeTonsOfConstants(&chunk);
+	//writeChunk(&chunk, OP_RETURN, lineNumber);
+	writeTonsOfConstants(&chunk);
 
 	disassembleChunk(&chunk, "test chunk");
 	InterpretResult result = interpret(&vm, &chunk);

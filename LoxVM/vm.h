@@ -2,7 +2,7 @@
 #include "chunk.h"
 #include "value.h"
 
-#define STACK_MAX 256
+#define STACK_MAX 1024
 
 typedef struct
 {

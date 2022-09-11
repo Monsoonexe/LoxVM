@@ -14,10 +14,23 @@ void initVM(VM* vm)
 	vm->sp = vm->stack; // reset stack pointer
 }
 
+static Value readConstantLong(VM* vm)
+{
+	// decode 3-byte index
+	uint8_t hi = (*(vm->ip++));
+	uint8_t mid = (*(vm->ip++));
+	uint8_t low = (*(vm->ip++));
+
+	// combine
+	uint32_t constantIndex = (hi << 16) | (mid << 8) | (low << 0);
+	return vm->chunk->constants.values[constantIndex];
+}
+
 static InterpretResult run(VM* vm)
 {
 #define READ_BYTE() (*(vm->ip++))
 #define READ_CONSTANT() (vm->chunk->constants.values[READ_BYTE()])
+#define READ_CONSTANT_LONG() (vm->chunk->constants.values[((READ_BYTE() << 16) | (READ_BYTE() << 8) | (READ_BYTE() << 0))])
 
 	while (1)
 	{
@@ -34,14 +47,20 @@ static InterpretResult run(VM* vm)
 			(uint32_t)(vm->ip - vm->chunk->code)); //offset
 #endif
 
-		uint8_t instruction = READ_BYTE();
-
 		// decode instruction
 		// consider “direct threaded code”, “jump table”, and “computed goto”.
-		switch (instruction)
+		uint8_t operation = READ_BYTE();
+		switch (operation)
 		{
-		case OP_CONSTANT:
 		case OP_CONSTANT_LONG:
+		{
+			Value constant = readConstantLong(vm); // function works, macro doesn't
+			push(vm, constant);
+			printValue(constant);
+			printf("\n");
+			break;
+		}
+		case OP_CONSTANT:
 		{
 			Value constant = READ_CONSTANT();
 			push(vm, constant);
@@ -66,6 +85,7 @@ static InterpretResult run(VM* vm)
 		}
 	}
 
+#undef READ_CONSTANT_LONG
 #undef READ_CONSTANT
 #undef READ_BYTE
 }
