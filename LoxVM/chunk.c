@@ -58,6 +58,7 @@ void writeConstant(Chunk* chunk, Value value, uint32_t line)
 		uint8_t mid = (uint8_t)(index >> 8);
 		uint8_t low = (uint8_t)(index >> 0);
 
+		// write bytes
 		writeChunk(chunk, OP_CONSTANT_LONG, line);
 		writeChunk(chunk, hi, line);
 		writeChunk(chunk, mid, line);

@@ -16,9 +16,10 @@ static uint32_t constantLongInstruction(const char* name,
 	Chunk* chunk, uint32_t offset)
 {
 	// decode 3-byte index
-	uint8_t hi = chunk->code[offset + 1];
-	uint8_t mid = chunk->code[offset + 2];
-	uint8_t low = chunk->code[offset + 3];
+	uint8_t* code = chunk->code; // fetch once
+	uint8_t hi = code[offset + 1];
+	uint8_t mid = code[offset + 2];
+	uint8_t low = code[offset + 3];
 
 	// combine
 	uint32_t constantIndex = (hi << 16) | (mid << 8) | (low << 0);
@@ -77,6 +78,8 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 		return constantInstruction("OP_CONSTANT", chunk, offset);
 	case OP_CONSTANT_LONG:
 		return constantLongInstruction("OP_CONSTANT_LONG", chunk, offset);
+	case OP_NEGATE:
+		return simpleInstruction("OP_NEGATE", offset);
 	case OP_RETURN:
 		return simpleInstruction("OP_RETURN", offset);
 	default:
