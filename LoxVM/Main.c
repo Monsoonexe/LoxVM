@@ -45,7 +45,7 @@ int32_t main(int argc, char* args[])
 	writeChunk(&chunk, OP_DIVIDE, lineNumber);
 
 	writeChunk(&chunk, OP_NEGATE, lineNumber);
-	//writeChunk(&chunk, OP_RETURN, lineNumber);
+	writeChunk(&chunk, OP_RETURN, lineNumber);
 	//writeTonsOfConstants(&chunk);
 
 	disassembleChunk(&chunk, "test chunk");
