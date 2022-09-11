@@ -37,10 +37,16 @@ int32_t main(int argc, char* args[])
 	uint32_t constIndex = addConstant(&chunk, 1.2);
 	writeChunk(&chunk, OP_CONSTANT, lineNumber);
 	writeChunk(&chunk, constIndex, lineNumber);
+
+	writeConstant(&chunk, 3.4, lineNumber);
+	writeChunk(&chunk, OP_ADD, lineNumber);
+
+	writeConstant(&chunk, 5.6, lineNumber);
+	writeChunk(&chunk, OP_DIVIDE, lineNumber);
+
 	writeChunk(&chunk, OP_NEGATE, lineNumber);
-	//writeConstant(&chunk, 99.2, lineNumber);
 	//writeChunk(&chunk, OP_RETURN, lineNumber);
-	writeTonsOfConstants(&chunk);
+	//writeTonsOfConstants(&chunk);
 
 	disassembleChunk(&chunk, "test chunk");
 	InterpretResult result = interpret(&vm, &chunk);
