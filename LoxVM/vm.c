@@ -6,12 +6,16 @@
 void freeVM(VM* vm)
 {
 	freeChunk(vm->chunk);
+	freeValueArray(&vm->stack);
 }
 
 void initVM(VM* vm)
 {
 	vm->chunk = NULL;
-	vm->sp = vm->stack; // reset stack pointer
+
+	// reset stack pointer
+	initValueArray(&vm->stack);
+
 }
 
 static Value readConstantLong(VM* vm)
@@ -43,7 +47,7 @@ static InterpretResult run(VM* vm)
 	{
 #ifdef DEBUG_TRACE_EXECUTION
 		printf("        ");
-		for (Value* slot = vm->stack; slot < vm->sp; slot++)
+		for (Value* slot = &vm->stack; slot < vm->stack.count; slot++)
 		{
 			printf("[ ");
 			printValue(*slot);
@@ -79,7 +83,12 @@ static InterpretResult run(VM* vm)
 		case OP_SUBTRACT: BINARY_OP(-); break;
 		case OP_MULTIPLY: BINARY_OP(*); break;
 		case OP_DIVIDE: BINARY_OP(/); break;
-		case OP_NEGATE: vm->sp[-1] = -vm->sp[-1]; break;
+		case OP_NEGATE:
+		{
+			uint32_t last = vm->stack.count - 1;
+			vm->stack.values[last] = -vm->stack.values[last];
+			break;
+		}
 		case OP_RETURN:
 		{
 			Value value = pop(vm);
@@ -107,10 +116,12 @@ InterpretResult interpret(VM* vm, Chunk* chunk)
 
 void push(VM* vm, Value value)
 {
-	*(vm->sp++) = value;
+	writeValueArray(&vm->stack, value);
+	//*(vm->sp++) = value;
 }
 
 Value pop(VM* vm)
 {
-	return *(--(vm->sp));
+	// *(--(vm->sp));
+	return vm->stack.values[--vm->stack.count];
 }

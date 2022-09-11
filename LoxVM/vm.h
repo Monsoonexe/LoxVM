@@ -17,9 +17,8 @@ typedef struct
 	/// <summary>
 	/// Points to where the next value will go.
 	/// </summary>
-	Value* sp;
-
-	Value stack[STACK_MAX];
+	//Value* sp; // stack.count
+	ValueArray stack;
 } VM;
 
 typedef enum
