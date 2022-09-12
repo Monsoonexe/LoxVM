@@ -2,10 +2,13 @@
 #include "chunk.h"
 #include "value.h"
 
-#define STACK_MAX 1024
+#define STACK_DEFAULT 256
 
 typedef struct
 {
+	/// <summary>
+	/// Working set of instructions to execute.
+	/// </summary>
 	Chunk* chunk;
 
 	/// <summary>
@@ -30,6 +33,6 @@ typedef enum
 
 void freeVM(VM* vm);
 void initVM(VM* vm);
-InterpretResult interpret(VM* vm, Chunk* chunk);
+InterpretResult interpret(VM* vm, const char* source);
 void push(VM* vm, Value value);
 Value pop(VM* vm);

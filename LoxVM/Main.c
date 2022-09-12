@@ -1,17 +1,93 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "chunk.h"
 #include "debug.h"
 #include "vm.h"
+
+InterpretResult result;
 
 void printIntro()
 {
 
 }
 
+static void repl(VM* vm)
+{
+	char line[1024];
+	while (true)
+	{
+		printf("> "); // prompt
+		
+		// TODO - multiline
+		if (!fgets(line, sizeof(line), stdin))
+		{
+			printf("\n");
+			break;
+		}
+
+		interpret(vm, line);
+	}
+}
+
+static char* readFile(const char* path)
+{
+	// FILE* file = fopen(path, "rb");
+	FILE* file;
+	int err = fopen_s(&file, path, "rb");
+
+	// eat your vegetables
+	if (file == NULL)
+	{
+		fprintf(stderr, "Could not open file <%s>\n", path);
+		exit(74);
+	}
+
+	// count file size
+	fseek(file, 0l, SEEK_END);
+	size_t fileSize = ftell(file);
+	rewind(file);
+
+	// alloc buffer
+	char* buffer = (char*)malloc(fileSize + 1);
+
+	if (buffer == NULL)
+	{
+		fprintf(stderr, "Not enough memory to read <%s>\n", path);
+		exit(74);
+	}
+
+	size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
+
+	if (bytesRead < fileSize)
+	{
+		fprintf(stderr, "Could not read file <%s>\n", path);
+		exit(74);
+	}
+
+	buffer[bytesRead] = '\0'; // null-terminate string
+
+	fclose(file);
+	return buffer;
+}
+
+static void runFile(VM* vm, const char* path)
+{
+	char* source = readFile(path);
+	result = interpret(vm, source);
+	free(source);
+}
+
 int32_t getErrorCode(InterpretResult result)
 {
-	// todo
-	return 0;
+	if (result == INTERPRET_COMPILE_ERROR)
+		return 65;
+
+	else if (result == INTERPRET_RUNTIME_ERROR)
+		return 70;
+	
+	else
+		return 0;
 }
 
 void writeTonsOfConstants(Chunk* chunk)
@@ -22,38 +98,29 @@ void writeTonsOfConstants(Chunk* chunk)
 	}
 }
 
-int32_t main(int argc, char* args[])
+int32_t main(int argc, char* argv[])
 {
 	printIntro();
 
 	VM vm;
 	initVM(&vm);
 
-	uint32_t lineNumber = 123;
-	Chunk chunk;
-	initChunk(&chunk);
-
-	// test
-	uint32_t constIndex = addConstant(&chunk, 1.2);
-	writeChunk(&chunk, OP_CONSTANT, lineNumber);
-	writeChunk(&chunk, constIndex, lineNumber);
-
-	writeConstant(&chunk, 3.4, lineNumber);
-	writeChunk(&chunk, OP_ADD, lineNumber);
-
-	writeConstant(&chunk, 5.6, lineNumber);
-	writeChunk(&chunk, OP_DIVIDE, lineNumber);
-
-	writeChunk(&chunk, OP_NEGATE, lineNumber);
-	writeChunk(&chunk, OP_RETURN, lineNumber);
-	//writeTonsOfConstants(&chunk);
-
-	disassembleChunk(&chunk, "test chunk");
-	InterpretResult result = interpret(&vm, &chunk);
+	if (argc == 1)
+	{
+		repl(&vm);
+	}
+	else if (argc == 2)
+	{
+		runFile(&vm, argv[1]);
+	}
+	else
+	{
+		fprintf(stderr, "Usage: clox [path]\n");
+		return 64;
+	}
 
 	// teardown
 	freeVM(&vm);
-	freeChunk(&chunk);
 
 	return getErrorCode(result);
 }

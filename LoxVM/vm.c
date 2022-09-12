@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include "common.h"
+#include "compiler.h"
 #include "debug.h"
+#include "memory.h"
 #include "vm.h"
 
 void freeVM(VM* vm)
@@ -13,9 +15,10 @@ void initVM(VM* vm)
 {
 	vm->chunk = NULL;
 
-	// reset stack pointer
+	// reset stack
 	initValueArray(&vm->stack);
-
+	vm->stack.capacity = STACK_DEFAULT;
+	vm->stack.values = GROW_ARRAY(Value, vm->stack.values, 0, STACK_DEFAULT);
 }
 
 static Value readConstantLong(VM* vm)
@@ -47,10 +50,12 @@ static InterpretResult run(VM* vm)
 	{
 #ifdef DEBUG_TRACE_EXECUTION
 		printf("        ");
-		for (Value* slot = &vm->stack; slot < vm->stack.count; slot++)
+
+		//for (Value* slot = vm->stack.values; slot < vm->stack.count; slot++)
+		for (uint32_t i = 0; i < vm->stack.count; ++i)
 		{
 			printf("[ ");
-			printValue(*slot);
+			printValue(vm->stack.values[i]);
 			printf(" ]");
 		}
 
@@ -107,21 +112,18 @@ static InterpretResult run(VM* vm)
 #undef READ_BYTE
 }
 
-InterpretResult interpret(VM* vm, Chunk* chunk)
+InterpretResult interpret(VM* vm, const char* source)
 {
-	vm->chunk = chunk;
-	vm->ip = chunk->code;
-	return run(vm);
+	compile(source);
+	return INTERPRET_OK;
 }
 
 void push(VM* vm, Value value)
 {
 	writeValueArray(&vm->stack, value);
-	//*(vm->sp++) = value;
 }
 
 Value pop(VM* vm)
 {
-	// *(--(vm->sp));
 	return vm->stack.values[--vm->stack.count];
 }
