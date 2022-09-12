@@ -3,6 +3,8 @@
 #include "common.h"
 #include "value.h"
 
+#define CONSTANTS_MAX 16777216 // (1 << 24)
+
 typedef enum
 {
 	OP_CONSTANT,
@@ -28,4 +30,4 @@ uint32_t addConstant(Chunk* chunk, Value value);
 void freeChunk(Chunk* chunk);
 void initChunk(Chunk* chunk);
 void writeChunk(Chunk* chunk, uint8_t byte, uint32_t line);
-void writeConstant(Chunk* chunk, Value value, uint32_t line);
+uint32_t writeConstant(Chunk* chunk, Value value, uint32_t line);

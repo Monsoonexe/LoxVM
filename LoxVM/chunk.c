@@ -42,16 +42,16 @@ void writeChunk(Chunk* chunk, uint8_t byte, uint32_t line)
 	chunk->lines[count] = line;
 }
 
-void writeConstant(Chunk* chunk, Value value, uint32_t line)
+uint32_t writeConstant(Chunk* chunk, Value value, uint32_t line)
 {
 	uint32_t index = addConstant(chunk, value);
 
-	if (index < 256) // single-byte locater
+	if (index <= UINT8_MAX) // single-byte locater
 	{
 		writeChunk(chunk, OP_CONSTANT, line);
 		writeChunk(chunk, (uint8_t)index, line);
 	}
-	else // 3-byte locater
+	else // 3-byte encoder
 	{
 		// encode index as 3 bytes (24 bits)
 		uint8_t hi = (uint8_t)(index >> 16);
@@ -64,4 +64,6 @@ void writeConstant(Chunk* chunk, Value value, uint32_t line)
 		writeChunk(chunk, mid, line);
 		writeChunk(chunk, low, line);
 	}
+
+	return index;
 }
