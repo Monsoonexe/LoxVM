@@ -146,6 +146,9 @@
     <ClInclude Include="value.h" />
     <ClInclude Include="vm.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\q\LoxInterpreter\LoxInterpreter\Tools\LoxGrammar.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
