@@ -206,7 +206,7 @@ static void compileGrouping()
 static void compileNumber()
 {	 // parse entire string
 	double value = strtod(parser.previous.start, NULL);
-	emitConstant(value);
+	emitConstant(NUMBER_VAL(value));
 }
 
 static void compileUnary()

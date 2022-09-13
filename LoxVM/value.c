@@ -11,8 +11,10 @@ void initValueArray(ValueArray* array)
 
 void printValue(Value value)
 {
+	// TODO - print other value types
+
 	// g: Print a double in either normal or exponential notation, whichever is more appropriate for its magnitude.
-	printf("%g", value);
+	printf("%g", AS_NUMBER(value));
 }
 
 void writeValueArray(ValueArray* array, Value value)

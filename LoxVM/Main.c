@@ -94,7 +94,7 @@ void writeTonsOfConstants(Chunk* chunk)
 {
 	for (int i = 1; i <= 300; ++i)
 	{
-		writeConstant(chunk, i, 100 + i);
+		writeConstant(chunk, NUMBER_VAL(i), 100 + i);
 	}
 }
 
