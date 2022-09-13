@@ -78,6 +78,14 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 		return constantInstruction("OP_CONSTANT", chunk, offset);
 	case OP_CONSTANT_LONG:
 		return constantLongInstruction("OP_CONSTANT_LONG", chunk, offset);
+	case OP_ZERO:
+		return simpleInstruction("OP_ZERO", offset);
+	case OP_NIL:
+		return simpleInstruction("OP_NIL", offset);
+	case OP_TRUE:
+		return simpleInstruction("OP_TRUE", offset);
+	case OP_FALSE:
+		return simpleInstruction("OP_FALSE", offset);
 	case OP_ADD:
 		return simpleInstruction("OP_ADD", offset);
 	case OP_SUBTRACT:
@@ -86,6 +94,8 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 		return simpleInstruction("OP_MULTIPLY", offset);
 	case OP_DIVIDE:
 		return simpleInstruction("OP_DIVIDE", offset);
+	case OP_NOT:
+		return simpleInstruction("OP_NOT", offset);
 	case OP_NEGATE:
 		return simpleInstruction("OP_NEGATE", offset);
 	case OP_RETURN:

@@ -145,6 +145,8 @@ static void emitConstant(Value value)
 		return;
 	}
 
+	// special-case values
+
 	// emit constant
 	uint32_t i = addConstant(currentChunk(), value);
 	if (constantCount >= UINT8_MAX)
@@ -181,14 +183,29 @@ static void compileBinary()
 
 	switch (operatorType)
 	{
-	case TOKEN_PLUS: emitByte(OP_ADD); break;
-	case TOKEN_MINUS: emitByte(OP_SUBTRACT); break;
-	case TOKEN_STAR: emitByte(OP_MULTIPLY); break;
-	case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
-
-	default: return; // unreachable
+		case TOKEN_PLUS: emitByte(OP_ADD); break;
+		case TOKEN_MINUS: emitByte(OP_SUBTRACT); break;
+		case TOKEN_STAR: emitByte(OP_MULTIPLY); break;
+		case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
+		default: return; // unreachable
 	}
 }
+
+static void compileTrue()
+{
+	emitByte(OP_TRUE);
+}
+
+static void compileFalse()
+{
+	emitByte(OP_FALSE);
+}
+
+static void compileNil()
+{
+	emitByte(OP_NIL);
+}
+
 
 static void compileExpression()
 {
@@ -206,7 +223,12 @@ static void compileGrouping()
 static void compileNumber()
 {	 // parse entire string
 	double value = strtod(parser.previous.start, NULL);
-	emitConstant(NUMBER_VAL(value));
+
+	// special cases
+	if (value == 0)
+		emitByte(OP_ZERO);
+	else
+		emitConstant(NUMBER_VAL(value));
 }
 
 static void compileUnary()
@@ -219,8 +241,9 @@ static void compileUnary()
 	// emit operator instruction
 	switch (operatorType)
 	{
-	case TOKEN_MINUS: emitByte(OP_NEGATE); break;
-	default: return; // uncreachable
+		case TOKEN_BANG: emitByte(OP_NOT); break;
+		case TOKEN_MINUS: emitByte(OP_NEGATE); break;
+		default: return; // uncreachable
 	}
 }
 
@@ -237,7 +260,7 @@ ParseRule rules[] =
   [TOKEN_SEMICOLON]		= {NULL,     NULL,   PREC_NONE},
   [TOKEN_SLASH]			= {NULL,     compileBinary, PREC_FACTOR},
   [TOKEN_STAR]			= {NULL,     compileBinary, PREC_FACTOR},
-  [TOKEN_BANG]			= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_BANG]			= {compileUnary,     NULL,   PREC_NONE},
   [TOKEN_BANG_EQUAL]	= {NULL,     NULL,   PREC_NONE},
   [TOKEN_EQUAL]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_EQUAL_EQUAL]	= {NULL,     NULL,   PREC_NONE},
@@ -251,17 +274,17 @@ ParseRule rules[] =
   [TOKEN_AND]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_CLASS]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_ELSE]			= {NULL,     NULL,   PREC_NONE},
-  [TOKEN_FALSE]			= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_FALSE]			= {compileFalse,     NULL,   PREC_NONE},
   [TOKEN_FOR]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_FUN]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_IF]			= {NULL,     NULL,   PREC_NONE},
-  [TOKEN_NIL]			= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_NIL]			= {compileNil,     NULL,   PREC_NONE},
   [TOKEN_OR]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_PRINT]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_RETURN]		= {NULL,     NULL,   PREC_NONE},
   [TOKEN_SUPER]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_THIS]			= {NULL,     NULL,   PREC_NONE},
-  [TOKEN_TRUE]			= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_TRUE]			= {compileTrue,     NULL,   PREC_NONE},
   [TOKEN_VAR]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_WHILE]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_ERROR]			= {NULL,     NULL,   PREC_NONE},

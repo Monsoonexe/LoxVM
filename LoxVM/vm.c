@@ -5,6 +5,7 @@
 #include "compiler.h"
 #include "debug.h"
 #include "memory.h"
+#include "value.h"
 #include "vm.h"
 
 /// <summary>
@@ -82,6 +83,11 @@ static Value peek(VM* vm, uint32_t distance)
 	return vm->stack.values[top - distance];
 }
 
+static bool isFalsey(Value value)
+{
+	return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
 static InterpretResult run(VM* vm)
 {
 #define READ_BYTE() (*(vm->ip++))
@@ -127,26 +133,17 @@ static InterpretResult run(VM* vm)
 		uint8_t operation = READ_BYTE();
 		switch (operation)
 		{
-		case OP_CONSTANT_LONG:
-		{
-			Value constant = readConstantLong(vm); // function works, macro doesn't
-			push(vm, constant);
-			printValue(constant);
-			printf("\n");
-			break;
-		}
-		case OP_CONSTANT:
-		{
-			Value constant = READ_CONSTANT();
-			push(vm, constant);
-			printValue(constant);
-			printf("\n");
-			break;
-		}
+		case OP_CONSTANT: push(vm, READ_CONSTANT()); break;
+		case OP_CONSTANT_LONG: push(vm, readConstantLong(vm)); break;// function works, macro doesn't
+		case OP_ZERO: push(vm, NUMBER_VAL(0)); break;
+		case OP_NIL: push(vm, NIL_VAL()); break;
+		case OP_TRUE: push(vm, BOOL_VAL(true)); break;
+		case OP_FALSE: push(vm, BOOL_VAL(false)); break;
 		case OP_ADD: BINARY_OP(NUMBER_VAL, +); break;
 		case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
 		case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
 		case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break; // TODO, div by 0
+		case OP_NOT: push(vm, BOOL_VAL(isFalsey(pop(vm)))); break;
 		case OP_NEGATE:
 		{
 			// type check
