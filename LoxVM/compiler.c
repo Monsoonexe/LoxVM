@@ -227,6 +227,8 @@ static void compileNumber()
 	// special cases
 	if (value == 0)
 		emitByte(OP_ZERO);
+	else if (value == 1)
+		emitByte(OP_ONE);
 	else
 		emitConstant(NUMBER_VAL(value));
 }
