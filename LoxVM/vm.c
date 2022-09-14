@@ -137,6 +137,7 @@ static InterpretResult run(VM* vm)
 		case OP_CONSTANT_LONG: push(vm, readConstantLong(vm)); break;// function works, macro doesn't
 		case OP_ZERO: push(vm, NUMBER_VAL(0)); break;
 		case OP_ONE: push(vm, NUMBER_VAL(1)); break;
+		case OP_NEG_ONE: push(vm, NUMBER_VAL(-1)); break;
 		case OP_NIL: push(vm, NIL_VAL()); break;
 		case OP_TRUE: push(vm, BOOL_VAL(true)); break;
 		case OP_FALSE: push(vm, BOOL_VAL(false)); break;
