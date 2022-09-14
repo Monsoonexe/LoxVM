@@ -15,6 +15,9 @@ typedef enum
 	OP_NIL,
 	OP_TRUE,
 	OP_FALSE,
+	OP_EQUAL,
+	OP_GREATER, // TODO: <= >=
+	OP_LESS,
 	OP_ADD,
 	OP_SUBTRACT,
 	OP_MULTIPLY,

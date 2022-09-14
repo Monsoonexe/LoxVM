@@ -42,4 +42,9 @@ typedef struct
 void freeValueArray(ValueArray* array);
 void initValueArray(ValueArray* array);
 void printValue(Value value);
+
+/// <summary>
+/// bool equality.
+/// </summary>
+bool valuesEqual(Value a, Value b);
 void writeValueArray(ValueArray* array, Value value);

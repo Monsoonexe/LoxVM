@@ -133,19 +133,35 @@ static InterpretResult run(VM* vm)
 		uint8_t operation = READ_BYTE();
 		switch (operation)
 		{
+		// constants
 		case OP_CONSTANT: push(vm, READ_CONSTANT()); break;
 		case OP_CONSTANT_LONG: push(vm, readConstantLong(vm)); break;// function works, macro doesn't
+
+		// literals
 		case OP_ZERO: push(vm, NUMBER_VAL(0)); break;
 		case OP_ONE: push(vm, NUMBER_VAL(1)); break;
 		case OP_NEG_ONE: push(vm, NUMBER_VAL(-1)); break;
 		case OP_NIL: push(vm, NIL_VAL()); break;
 		case OP_TRUE: push(vm, BOOL_VAL(true)); break;
 		case OP_FALSE: push(vm, BOOL_VAL(false)); break;
+
+		// boolean
+		case OP_NOT: push(vm, BOOL_VAL(isFalsey(pop(vm)))); break;
+		case OP_EQUAL: 
+		{
+			Value b = pop(vm);
+			Value a = pop(vm);
+			push(vm, BOOL_VAL(valuesEqual(a, b)));
+			break;
+		}
+		case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
+		case OP_LESS: BINARY_OP(BOOL_VAL, < ); break;
+
+		// arithmetic
 		case OP_ADD: BINARY_OP(NUMBER_VAL, +); break;
 		case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
 		case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
 		case OP_DIVIDE: BINARY_OP(NUMBER_VAL, /); break; // TODO, div by 0
-		case OP_NOT: push(vm, BOOL_VAL(isFalsey(pop(vm)))); break;
 		case OP_NEGATE:
 		{
 			// type check
