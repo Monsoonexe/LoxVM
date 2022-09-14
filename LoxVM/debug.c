@@ -82,6 +82,8 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 		return simpleInstruction("OP_ZERO", offset);
 	case OP_ONE:
 		return simpleInstruction("OP_ONE", offset);
+	case OP_NEG_ONE:
+		return simpleInstruction("OP_NEG_ONE", offset);
 	case OP_NIL:
 		return simpleInstruction("OP_NIL", offset);
 	case OP_TRUE:

@@ -206,7 +206,6 @@ static void compileNil()
 	emitByte(OP_NIL);
 }
 
-
 static void compileExpression()
 {
 	parsePrecedence(PREC_ASSIGNMENT); // start at lowest precedence
@@ -229,6 +228,8 @@ static void compileNumber()
 		emitByte(OP_ZERO);
 	else if (value == 1)
 		emitByte(OP_ONE);
+	else if (value == -1)
+		emitByte(OP_NEG_ONE);
 	else
 		emitConstant(NUMBER_VAL(value));
 }

@@ -11,6 +11,7 @@ typedef enum
 	OP_CONSTANT_LONG,
 	OP_ZERO,
 	OP_ONE,
+	OP_NEG_ONE,
 	OP_NIL,
 	OP_TRUE,
 	OP_FALSE,
