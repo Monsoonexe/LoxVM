@@ -17,4 +17,6 @@ typedef struct
 
 } Table;
 
+void freeTable(Table* table);
+void initTable(Table* table);
 float loadFactor(Table* table);
