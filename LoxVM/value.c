@@ -1,5 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "memory.h"
+#include "object.h"
 #include "value.h"
 
 void initValueArray(ValueArray* array)
@@ -17,6 +21,7 @@ void printValue(Value value)
 		case VAL_NIL: printf("nil"); break;
 		// g: Print a double in either normal or exponential notation, whichever is more appropriate for its magnitude.
 		case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
+		case VAL_OBJECT: printObject(value); break;
 	}
 }
 
@@ -27,10 +32,18 @@ bool valuesEqual(Value a, Value b)
 
 	switch (a.type) // have same type
 	{
-		case VAL_BOOL:	return AS_BOOL(a) == AS_BOOL(b);
-		case VAL_NIL:	return true; // nil := nil
+		case VAL_BOOL:	 return AS_BOOL(a) == AS_BOOL(b);
+		case VAL_NIL:	 return true; // nil := nil
 		case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
-		default: return false; // unreachable
+		case VAL_OBJECT:
+		{
+			ObjectString* aString = AS_STRING(a);
+			ObjectString* bString = AS_STRING(b);
+			uint32_t aLen = aString->length; // fetch once
+			return aLen == bString->length
+				&& memcmp(aString->chars, bString->chars, aLen) == 0;
+		}
+		default: exit(123); // unreachable;
 	}
 }
 

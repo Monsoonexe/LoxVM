@@ -22,6 +22,11 @@ typedef struct
 	/// </summary>
 	//Value* sp; // stack.count
 	ValueArray stack;
+
+	/// <summary>
+	/// Root of dynamically-allocated objects linked-list.
+	/// </summary>
+	Object* objects;
 } VM;
 
 typedef enum
@@ -31,8 +36,10 @@ typedef enum
 	INTERPRET_RUNTIME_ERROR
 } InterpretResult;
 
+extern VM vm; // declare, and expose to the rest of the program
+
 void freeVM(VM* vm);
 void initVM(VM* vm);
-InterpretResult interpret(VM* vm, const char* source);
-void push(VM* vm, Value value);
-Value pop(VM* vm);
+InterpretResult interpret(const char* source);
+void push(Value value);
+Value pop();

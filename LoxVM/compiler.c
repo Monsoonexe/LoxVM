@@ -196,7 +196,7 @@ static void compileBinary()
 		case TOKEN_MINUS: emitByte(OP_SUBTRACT); break;
 		case TOKEN_STAR: emitByte(OP_MULTIPLY); break;
 		case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
-		default: return; // unreachable
+		default: exit(123); // unreachable;
 	}
 }
 
@@ -243,6 +243,15 @@ static void compileNumber()
 		emitConstant(NUMBER_VAL(value));
 }
 
+static void compileString()
+{
+	// could handle escape characters here
+	// trim leading/trailing quotes
+	const char* start = parser.previous.start + 1;
+	uint32_t end = parser.previous.length - 2;
+	emitConstant(OBJECT_VAL(copyString(start, end)));
+}
+
 static void compileUnary()
 {
 	TokenType operatorType = parser.previous.type;
@@ -255,7 +264,7 @@ static void compileUnary()
 	{
 		case TOKEN_BANG: emitByte(OP_NOT); break;
 		case TOKEN_MINUS: emitByte(OP_NEGATE); break;
-		default: return; // uncreachable
+		default: exit(123); // unreachable;
 	}
 }
 
@@ -281,7 +290,7 @@ ParseRule rules[] =
   [TOKEN_LESS]			= {NULL,     compileBinary,   PREC_COMPARISON},
   [TOKEN_LESS_EQUAL]	= {NULL,     compileBinary,   PREC_COMPARISON},
   [TOKEN_IDENTIFIER]	= {NULL,     NULL,   PREC_NONE},
-  [TOKEN_STRING]		= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_STRING]		= {compileString,     NULL,   PREC_NONE},
   [TOKEN_NUMBER]		= {compileNumber,   NULL,   PREC_NONE},
   [TOKEN_QUESTION]		= {NULL,	NULL,	PREC_NONE},
   [TOKEN_COLON]			= {NULL,	NULL,	PREC_NONE},

@@ -12,7 +12,7 @@ void printIntro()
 
 }
 
-static void repl(VM* vm)
+static void repl()
 {
 	char line[1024];
 	while (true)
@@ -26,7 +26,7 @@ static void repl(VM* vm)
 			break;
 		}
 
-		interpret(vm, line);
+		interpret(line);
 	}
 }
 
@@ -71,10 +71,10 @@ static char* readFile(const char* path)
 	return buffer;
 }
 
-static void runFile(VM* vm, const char* path)
+static void runFile(const char* path)
 {
 	char* source = readFile(path);
-	result = interpret(vm, source);
+	result = interpret(source);
 	free(source);
 }
 
@@ -111,7 +111,7 @@ int32_t main(int argc, char* argv[])
 	}
 	else if (argc == 2)
 	{
-		runFile(&vm, argv[1]);
+		runFile(argv[1]);
 	}
 	else
 	{
