@@ -39,6 +39,7 @@ typedef enum
 extern VM vm; // declare, and expose to the rest of the program
 
 void freeVM(VM* vm);
+void initStack(VM* vm);
 void initVM(VM* vm);
 InterpretResult interpret(const char* source);
 void push(Value value);

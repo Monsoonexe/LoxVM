@@ -22,21 +22,33 @@ static void resetStack()
 	// no need to actually de-allocate anything
 }
 
+void initStack(VM* vm)
+{
+	initValueArray(&vm->stack);
+	vm->stack.capacity = STACK_DEFAULT;
+	vm->stack.values = GROW_ARRAY(Value, vm->stack.values, 0, STACK_DEFAULT);
+}
+
 void freeVM(VM* vm)
 {
-	freeChunk(vm->chunk);
+	// free code block
+	if (vm->chunk != NULL)
+		freeChunk(vm->chunk);
+
+	// free stack
 	freeValueArray(&vm->stack);
+
+	// force GC
+	freeObjects(vm->objects);
+
+	// reset fields
+	initVM(vm);
 }
 
 void initVM(VM* vm)
 {
 	vm->chunk = NULL;
-
-	// init stack
-	initValueArray(&vm->stack);
-	vm->stack.capacity = STACK_DEFAULT;
-	vm->stack.values = GROW_ARRAY(Value, vm->stack.values, 0, STACK_DEFAULT);
-
+	vm->ip = NULL;
 	vm->objects = NULL;
 }
 
@@ -153,7 +165,7 @@ static InterpretResult run()
 #endif
 
 		// decode instruction
-		// consider “direct threaded code”, “jump table”, and “computed goto”.
+		// consider ï¿½direct threaded codeï¿½, ï¿½jump tableï¿½, and ï¿½computed gotoï¿½.
 		uint8_t operation = READ_BYTE();
 		switch (operation)
 		{
@@ -275,5 +287,6 @@ InterpretResult interpret(const char* source)
 	InterpretResult result = run();
 
 	freeChunk(&chunk);
+	vm.chunk = NULL;
 	return result;
 }

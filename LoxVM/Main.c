@@ -106,6 +106,7 @@ int32_t main(int argc, char* argv[])
 	printIntro();
 
 	initVM(&vm);
+	initStack(&vm);
 
 	if (argc == 1)
 	{
