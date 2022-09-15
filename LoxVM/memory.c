@@ -1,9 +1,39 @@
 #include <stdlib.h>
-#include "memory.h"
 
-/// <summary>
-/// allocate, free, shrink, or grow.
-/// </summary>
+#include "object.h"
+#include "memory.h"
+#include "value.h"
+#include "vm.h"
+
+static void freeObject(Object* object)
+{
+	switch (object->type)
+	{
+		case OBJECT_STRING:
+		{
+			ObjectString* string = (ObjectString*)object;
+			if (string->isDynamic) // only free dynamic strings, not interned strings
+			{
+				// make sure isDynamic is correct or you'll start freeing
+				// interned strings.
+				FREE_ARRAY(char, string->chars, string->length + 1); // null-term
+			}
+			FREE(ObjectString, object); // free 'substruct'
+			break;
+		}
+	}
+}
+
+void freeObjects(Object* objects)
+{
+	while (objects != NULL)
+	{
+		Object* next = objects->next; // temp
+		freeObject(objects);
+		objects = next;
+	}
+}
+
 void* reallocate(void* pointer, size_t oldSize, size_t newSize)
 {
 	// free memory
