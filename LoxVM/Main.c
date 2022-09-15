@@ -26,6 +26,9 @@ static void repl()
 			break;
 		}
 
+		if (strcmp(line, "exit\n") == 0)
+			break;
+
 		interpret(line);
 	}
 }
@@ -102,7 +105,6 @@ int32_t main(int argc, char* argv[])
 {
 	printIntro();
 
-	VM vm;
 	initVM(&vm);
 
 	if (argc == 1)
