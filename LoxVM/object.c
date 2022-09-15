@@ -28,7 +28,8 @@ static Object* allocateObject(size_t size, ObjectType type)
 /// <summary>
 /// Constructor for ObjectString.
 /// </summary>
-static ObjectString* allocateString(char* chars, uint32_t length)
+static ObjectString* allocateString(const char* chars, 
+	uint32_t length, bool isDynamic, uint32_t hash)
 {
 	// base constructor
 	ObjectString* string = ALLOCATE_OBJECT(ObjectString, OBJECT_STRING);
@@ -36,15 +37,27 @@ static ObjectString* allocateString(char* chars, uint32_t length)
 	// init string object fields
 	string->length = length;
 	string->chars = chars;
+	string->isDynamic = isDynamic;
+	string->hash = hash;
 	return string;
+}
+
+static uint32_t hashString(const char* key, uint32_t length)
+{
+	uint32_t hash = 2166136261u; // return value
+	return hash;
 }
 
 ObjectString* copyString(const char* chars, uint32_t length)
 {
+	// clone c-string
+	uint32_t hash = hashString(chars, length);
 	char* heapChars = ALLOCATE(char, length + 1); // account for \0
 	memcpy(heapChars, chars, length);
 	heapChars[length] = '\0'; // null-terminated!
-	return allocateString(heapChars, length);
+
+	// new StringObject()
+	return allocateString(heapChars, length, true, hash);
 }
 
 void printObject(Value value)
@@ -62,7 +75,15 @@ void printObject(Value value)
 	}
 }
 
-ObjectString* takeString(char* chars, uint32_t length)
+ObjectString* takeString(const char* chars, uint32_t length)
 {
-	return allocateString(chars, length);
+	uint32_t hash = hashString(chars, length);
+	return allocateString(chars, length, true, hash);
+}
+
+ObjectString* takeConstantString(const char* chars, uint32_t length)
+{
+	// TODO - figure out weird bug
+	uint32_t hash = hashString(chars, length);
+	return allocateString(chars, length, false, hash);
 }

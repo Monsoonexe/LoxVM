@@ -32,17 +32,21 @@ struct Object
 
 /// <summary>
 /// Underlying string type in Lox.
+/// Essentially a 'string' that is always dynamically allocated.
 /// </summary>
-struct ObjectString
+struct ObjectString // challenge: flag as dynamic or static and account as such when freeing
 {
 	Object object;
 	uint32_t length;
-	char* chars;
+	bool isDynamic;// not implemented
+	const char* chars;
+	uint32_t hash;
 };
 
 ObjectString* copyString(const char* chars, uint32_t length);
 void printObject(Value value);
-ObjectString* takeString(char* chars, uint32_t length);
+ObjectString* takeString(const char* chars, uint32_t length);
+ObjectString* takeConstantString(const char* chars, uint32_t length);
 
 static inline bool isObjectType(Value value, ObjectType type)
 {
