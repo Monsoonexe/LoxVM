@@ -44,7 +44,16 @@ static ObjectString* allocateString(const char* chars,
 
 static uint32_t hashString(const char* key, uint32_t length)
 {
+	// FNV-1a hash function
+	// https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 	uint32_t hash = 2166136261u; // return value
+	for (uint32_t i = 0; i < length; ++i)
+	{
+		// maybe hash 4 bytes at a time?
+		hash ^= (uint8_t)key[i];
+		hash *= 16777619;
+	}
+
 	return hash;
 }
 
