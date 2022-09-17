@@ -29,7 +29,8 @@ bool tableDelete(Table* table, ObjectString* key);
 bool tableGet(Table* table, ObjectString* key, Value* value);
 
 /// <summary>
-/// Add or set an item in the table
+/// Add or set an item in the table. <br/>
+/// Returns 'true' if the key is new.
 /// </summary>
 bool tableSet(Table* table, ObjectString* key, Value value);
 void copyTable(Table* src, Table* dest);

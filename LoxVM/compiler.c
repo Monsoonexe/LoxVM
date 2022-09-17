@@ -36,7 +36,7 @@ typedef enum
 	PREC_PRIMARY
 } Precedence;
 
-typedef void (*ParseFn)(); // 'declaration reflects use'
+typedef void (*ParseFn)(bool canAssign); // 'declaration reflects use'
 
 typedef struct
 {
@@ -47,6 +47,7 @@ typedef struct
 } ParseRule;
 
 Parser parser;
+Compiler* current = NULL;
 Chunk* compilingChunk; // TODO - remove from global state
 
 // prototypes
@@ -57,7 +58,14 @@ static void compileStatement();
 static void compileDeclaration();
 static uint8_t parseVariable(const char* errorMessage);
 static void defineVariable(uint8_t global);
-static uint8_t parseIdentifierConstant(Token* name);
+static uint32_t parseIdentifierConstant(Token* name);
+
+void initCompiler(Compiler* compiler)
+{
+	compiler->localCount = 0;
+	compiler->scopeDepth = 0;
+	current = compiler;
+}
 
 static Chunk* currentChunk()
 {
@@ -196,6 +204,16 @@ static void endCompiler()
 #endif
 }
 
+static void beginScope()
+{
+	++current->scopeDepth;
+}
+
+static void endScope()
+{
+	--current->scopeDepth;
+}
+
 static void synchronize()
 {
 	// clear panic falg
@@ -226,7 +244,7 @@ static void synchronize()
 	}
 }
 
-static void compileBinary()
+static void compileBinary(bool canAssign)
 {
 	TokenType operatorType = parser.previous.type;
 	ParseRule* rule = getRule(operatorType);
@@ -251,17 +269,17 @@ static void compileBinary()
 	}
 }
 
-static void compileTrue()
+static void compileTrue(bool canAssign)
 {
 	emitByte(OP_TRUE);
 }
 
-static void compileFalse()
+static void compileFalse(bool canAssign)
 {
 	emitByte(OP_FALSE);
 }
 
-static void compileNil()
+static void compileNil(bool canAssign)
 {
 	emitByte(OP_NIL);
 }
@@ -269,6 +287,16 @@ static void compileNil()
 static void compileExpression()
 {
 	parsePrecedence(PREC_ASSIGNMENT); // start at lowest precedence
+}
+
+static void compileBlock()
+{
+	while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF))
+	{
+		compileDeclaration();
+	}
+
+	consume(TOKEN_RIGHT_BRACE, "Expected '}' after block.");
 }
 
 static void compileExpressionStatement()
@@ -288,9 +316,19 @@ static void compilePrintStatement()
 static void compileStatement()
 {
 	if (match(TOKEN_PRINT))
+	{
 		compilePrintStatement();
+	}
+	else if (match(TOKEN_LEFT_BRACE))
+	{
+		beginScope();
+		compileBlock();
+		endScope();
+	}
 	else
+	{
 		compileExpressionStatement();
+	}
 }
 
 static void compileVarDeclaration()
@@ -317,7 +355,7 @@ static void compileDeclaration()
 		synchronize();
 }
 
-static void compileGrouping()
+static void compileGrouping(bool canAssign)
 {
 	// groupings have no runtime semantics -- merely exist for 
 	// inserting lower-prcedence expressions
@@ -325,7 +363,7 @@ static void compileGrouping()
 	consume(TOKEN_RIGHT_PAREN, "Expected ')' after expression.");
 }
 
-static void compileNumber()
+static void compileNumber(bool canAssign)
 {	 // parse entire string
 	double value = strtod(parser.previous.start, NULL);
 
@@ -340,7 +378,7 @@ static void compileNumber()
 		emitConstant(NUMBER_VAL(value));
 }
 
-static void compileString()
+static void compileString(bool canAssign)
 {
 	// could handle escape characters here
 	// trim leading/trailing quotes
@@ -349,18 +387,28 @@ static void compileString()
 	emitConstant(OBJECT_VAL(copyString(start, end)));
 }
 
-static void compileNamedVariable(Token name)
+static void compileNamedVariable(Token name, bool canAssign)
 {
-	uint8_t arg = parseIdentifierConstant(&name);
-	emitBytes(OP_GET_GLOBAL, arg);
+	uint32_t arg = parseIdentifierConstant(&name);
+
+	// getter or setter?
+	if (canAssign && match(TOKEN_EQUAL))
+	{
+		compileExpression();
+		emitBytes(OP_SET_GLOBAL, arg);
+	}
+	else
+	{
+		emitBytes(OP_GET_GLOBAL, arg);
+	}
 }
 
-static void compileVariable()
+static void compileVariable(bool canAssign)
 {
-	compileNamedVariable(parser.previous);
+	compileNamedVariable(parser.previous, canAssign);
 }
 
-static void compileUnary()
+static void compileUnary(bool canAssign)
 {
 	TokenType operatorType = parser.previous.type;
 
@@ -432,7 +480,8 @@ static void parsePrecedence(Precedence precedence)
 		return;
 	}
 
-	prefixRule(); // compileSomething()
+	bool canAssign = precedence <= PREC_ASSIGNMENT;
+	prefixRule(canAssign); // compileSomething()
 
 	// infix
 	while (precedence <= getRule(parser.current.type)->precedence)
@@ -440,11 +489,14 @@ static void parsePrecedence(Precedence precedence)
 		// previously-compiled prefix might be an operand for infix
 		advance();
 		ParseFn infixRule = getRule(parser.previous.type)->infix;
-		infixRule();
+		infixRule(canAssign);
 	}
+
+	if (canAssign && match(TOKEN_EQUAL))
+		error("Invalid assignment target.");
 }
 
-static uint8_t parseIdentifierConstant(Token* name)
+static uint32_t parseIdentifierConstant(Token* name)
 {
 	// return a copy of the string as identifier
 	// TODO - take constant string
@@ -479,9 +531,11 @@ static ParseRule* getRule(TokenType type)
 bool compile(const char* source, Chunk* chunk)
 {
 	uint32_t line = -1;
+	Compiler compiler;
 	compilingChunk = chunk;
 	initScanner(source);
 	initParser(&parser);
+	initCompiler(&compiler);
 
 	advance(); // prime the pump
 
