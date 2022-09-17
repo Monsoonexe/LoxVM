@@ -115,6 +115,8 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 			return simpleInstruction("OP_DIVIDE", offset);
 		case OP_NEGATE:
 			return simpleInstruction("OP_NEGATE", offset);
+		case OP_PRINT:
+			return simpleInstruction("OP_PRINT", offset);
 		case OP_RETURN:
 			return simpleInstruction("OP_RETURN", offset);
 		default:

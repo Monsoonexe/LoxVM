@@ -53,6 +53,8 @@ Chunk* compilingChunk; // TODO - remove from global state
 static void compileExpression();
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
+static void compileStatement();
+static void compileDeclaration();
 
 static Chunk* currentChunk()
 {
@@ -125,6 +127,22 @@ static void consume(TokenType type, const char* message)
 	}
 
 	errorAtCurrent(message);
+}
+
+static bool check(TokenType type)
+{
+	return parser.current.type == type;
+}
+
+/// <summary>
+/// Advances if true.
+/// </summary>
+static bool match(TokenType type)
+{
+	if (!check(type))
+		return false;
+	advance();
+	return true;
 }
 
 static void emitByte(uint8_t byte)
@@ -213,6 +231,24 @@ static void compileFalse()
 static void compileNil()
 {
 	emitByte(OP_NIL);
+}
+
+static void compilePrintStatement()
+{
+	compileExpression();
+	consume(TOKEN_SEMICOLON, "Expected ';' after value.");
+	emitByte(OP_PRINT);
+}
+
+static void compileStatement()
+{
+	if (match(TOKEN_PRINT))
+		compilePrintStatement();
+}
+
+static void compileDeclaration()
+{
+	compileStatement();
 }
 
 static void compileExpression()
@@ -355,8 +391,10 @@ bool compile(const char* source, Chunk* chunk)
 	initParser(&parser);
 
 	advance(); // prime the pump
-	compileExpression();
-	consume(TOKEN_EOF, "Expected end of expression.");
+
+	while (!match(TOKEN_EOF))
+		compileDeclaration();
+
 	endCompiler();
 	return !parser.hadError;
 }

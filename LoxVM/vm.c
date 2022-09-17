@@ -255,11 +255,14 @@ static InterpretResult run()
 			vm.stack.values[top] = NUMBER_VAL(-AS_NUMBER(vm.stack.values[top])); // challenge: avoid push/pop for unary op
 			break;
 		}
+		case OP_PRINT:
+		{
+			printValue(pop());
+			printf("\n");
+		}
 		case OP_RETURN:
 		{
-			Value value = pop();
-			printValue(value);
-			printf("\n");
+			// exit interpreter
 			return INTERPRET_OK;
 		}
 		default:
