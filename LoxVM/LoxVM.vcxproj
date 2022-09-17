@@ -153,6 +153,10 @@
   <ItemGroup>
     <Text Include="..\..\q\LoxInterpreter\LoxInterpreter\Tools\LoxGrammar.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Lox1.lox" />
+    <None Include="Lox2.lox" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

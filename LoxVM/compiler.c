@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "common.h"
 #include "compiler.h"
@@ -59,6 +60,7 @@ static void compileDeclaration();
 static uint8_t parseVariable(const char* errorMessage);
 static void defineVariable(uint8_t global);
 static uint32_t parseIdentifierConstant(Token* name);
+static int32_t resolveLocal(Compiler* compiler, Token* name);
 
 void initCompiler(Compiler* compiler)
 {
@@ -212,6 +214,25 @@ static void beginScope()
 static void endScope()
 {
 	--current->scopeDepth;
+
+	// count locals to be deallocated
+	int32_t count = 0;
+	while (current->localCount > 0
+		&& current->locals[current->localCount - 1].depth > current->scopeDepth)
+	{
+		++count;
+		--current->localCount;
+	}
+
+	// pop locals off stack to deallocate
+	if (count == 1)
+	{
+		emitByte(OP_POP);
+	}
+	else if (count > 1)
+	{
+		emitBytes(OP_POPN, count);
+	}
 }
 
 static void synchronize()
@@ -389,17 +410,31 @@ static void compileString(bool canAssign)
 
 static void compileNamedVariable(Token name, bool canAssign)
 {
-	uint32_t arg = parseIdentifierConstant(&name);
+	uint8_t getOp, setOp; // bytecode to be emitted
+	int32_t arg = resolveLocal(current, &name);
+
+	// local or global resolution
+	if (arg == -1)
+	{
+		arg = parseIdentifierConstant(&name);
+		getOp = OP_GET_GLOBAL;
+		setOp = OP_SET_GLOBAL;
+	}
+	else
+	{
+		getOp = OP_GET_LOCAL;
+		setOp = OP_SET_LOCAL;
+	}
 
 	// getter or setter?
 	if (canAssign && match(TOKEN_EQUAL))
 	{
 		compileExpression();
-		emitBytes(OP_SET_GLOBAL, arg);
+		emitBytes(setOp, (uint8_t)arg);
 	}
 	else
 	{
-		emitBytes(OP_GET_GLOBAL, arg);
+		emitBytes(getOp, (uint8_t)arg);
 	}
 }
 
@@ -496,6 +531,74 @@ static void parsePrecedence(Precedence precedence)
 		error("Invalid assignment target.");
 }
 
+static void addLocal(Token name)
+{
+	// guard against overflow
+	if (current->localCount == UINT8_COUNT)
+	{
+		error("Too many local variables in function.");
+		return;
+	}
+
+	Local* local = &current->locals[current->localCount++];
+	local->name = name; // original source lexeme
+	local->depth = -1; // flag as uninit'd
+}
+
+static bool identifiersEqual(Token* a, Token* b)
+{
+	uint32_t length = a->length; // fetch once
+	return (length == b->length) && memcmp(a->start, b->start, length) == 0;
+}
+
+/// <summary>
+/// the locals array in the compiler has the exact same layout as the VM's 
+/// stack will have at runtime.
+/// </summary>
+/// <returns>Index of local variable on stack.</returns>
+static int32_t resolveLocal(Compiler* compiler, Token* name)
+{
+	// walk backwards to get inner-most scope first
+	for (int32_t i = compiler->localCount - 1; i >= 0; --i)
+	{
+		Local* local = &compiler->locals[i];
+		if (identifiersEqual(name, &local->name))
+		{
+			// ensure fully defined
+			if (local->depth == -1)
+				error("Can't read local variable in its own initializer.");
+
+			return i;
+		}
+
+	}
+
+	// not found in locals -- global
+	return -1;
+}
+
+static void declareVariable()
+{
+	// don't declare globals (late bound)
+	if (current->scopeDepth == 0)
+		return;
+
+	Token* name = &parser.previous;
+
+	// guard against re-declaring variable
+	for (int32_t i = current->localCount - 1; i >= 0; --i)
+	{
+		Local* local = &current->locals[i]; // iterator
+		if (local->depth != -1 && local->depth < current->scopeDepth)
+			break;
+
+		if (identifiersEqual(name, &local->name))
+			error("Already a variable with this name in this scope.");
+	}
+
+	addLocal(*name);
+}
+
 static uint32_t parseIdentifierConstant(Token* name)
 {
 	// return a copy of the string as identifier
@@ -509,11 +612,35 @@ static uint32_t parseIdentifierConstant(Token* name)
 static uint8_t parseVariable(const char* errorMessage)
 {
 	consume(TOKEN_IDENTIFIER, errorMessage);
+
+	// handle local variable
+	declareVariable();
+	if (current->scopeDepth > 0)
+		return 0; // dummy table index
+
 	return parseIdentifierConstant(&parser.previous);
+}
+
+/// <summary>
+/// Marks the variable at the top of the locals stack as initialized.
+/// Now is ready for use.
+/// </summary>
+static void markInitialized()
+{
+	// top of the variable stack is now init'd
+	current->locals[current->localCount - 1].depth =
+		current->scopeDepth;
 }
 
 static void defineVariable(uint8_t global)
 {
+	// don't define local variables
+	if (current->scopeDepth > 0)
+	{
+		markInitialized();
+		return;
+	}
+
 	emitBytes(OP_DEFINE_GLOBAL, global);
 }
 

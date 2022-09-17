@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="LoxScripts">
+      <UniqueIdentifier>{3b7fdafc-894a-4b26-8fa0-d1ce8095f689}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.c">
@@ -80,5 +83,13 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\..\q\LoxInterpreter\LoxInterpreter\Tools\LoxGrammar.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Lox1.lox">
+      <Filter>LoxScripts</Filter>
+    </None>
+    <None Include="Lox2.lox">
+      <Filter>LoxScripts</Filter>
+    </None>
   </ItemGroup>
 </Project>

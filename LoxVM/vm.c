@@ -187,6 +187,22 @@ static InterpretResult run()
 		case OP_TRUE: push(BOOL_VAL(true)); break;
 		case OP_FALSE: push(BOOL_VAL(false)); break;
 		case OP_POP: pop(); break; // discard 
+		case OP_POPN: vm.stack.count -= READ_BYTE(); break;
+
+		// variable accessors
+		case OP_GET_LOCAL:
+		{
+			uint8_t slot = READ_BYTE();
+			push(vm.stack.values[slot]);
+			break;
+		}
+		case OP_SET_LOCAL:
+		{
+			// leave val on stack to support 'a = b = c = 10;'
+			uint8_t slot = READ_BYTE();
+			vm.stack.values[slot] = peek(0);
+			break;
+		}
 		case OP_GET_GLOBAL:
 		{
 			ObjectString* name = READ_STRING();

@@ -15,7 +15,18 @@ typedef enum
 	OP_NIL,
 	OP_TRUE,
 	OP_FALSE,
+
+	/// <summary>
+	/// Pop an item off the stack.
+	/// </summary>
 	OP_POP,
+
+	/// <summary>
+	/// Pop 'n' items off the stack.
+	/// </summary>
+	OP_POPN,
+	OP_GET_LOCAL,
+	OP_SET_LOCAL,
 	OP_GET_GLOBAL, // TODO - LONG
 	OP_SET_GLOBAL, // TODO - LONG
 	OP_DEFINE_GLOBAL,
