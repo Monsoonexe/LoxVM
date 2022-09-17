@@ -311,6 +311,7 @@ static InterpretResult run()
 		{
 			printValue(pop());
 			printf("\n");
+			break;
 		}
 		case OP_RETURN:
 		{
