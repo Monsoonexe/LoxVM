@@ -216,7 +216,7 @@ static void endScope()
 	--current->scopeDepth;
 
 	// count locals to be deallocated
-	int32_t count = 0;
+	uint8_t count = 0;
 	while (current->localCount > 0
 		&& current->locals[current->localCount - 1].depth > current->scopeDepth)
 	{
