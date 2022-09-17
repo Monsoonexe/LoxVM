@@ -55,6 +55,9 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 static void compileStatement();
 static void compileDeclaration();
+static uint8_t parseVariable(const char* errorMessage);
+static void defineVariable(uint8_t global);
+static uint8_t parseIdentifierConstant(Token* name);
 
 static Chunk* currentChunk()
 {
@@ -193,6 +196,36 @@ static void endCompiler()
 #endif
 }
 
+static void synchronize()
+{
+	// clear panic falg
+	parser.panicMode = false;
+
+	// consume until expression terminates
+	while (parser.current.type != TOKEN_EOF)
+	{
+		if (parser.previous.type == TOKEN_SEMICOLON) return;
+
+		// look for statement beginners
+		switch (parser.current.type)
+		{
+		case TOKEN_CLASS:
+		case TOKEN_FUN:
+		case TOKEN_VAR:
+		case TOKEN_FOR:
+		case TOKEN_IF:
+		case TOKEN_WHILE:
+		case TOKEN_PRINT:
+		case TOKEN_RETURN:
+			return;
+		default:
+			; // Do nothing.
+		}
+
+		advance();
+	}
+}
+
 static void compileBinary()
 {
 	TokenType operatorType = parser.previous.type;
@@ -233,6 +266,18 @@ static void compileNil()
 	emitByte(OP_NIL);
 }
 
+static void compileExpression()
+{
+	parsePrecedence(PREC_ASSIGNMENT); // start at lowest precedence
+}
+
+static void compileExpressionStatement()
+{
+	compileExpression();
+	consume(TOKEN_SEMICOLON, "Expected ';' after expression.");
+	emitByte(OP_POP); // discard result of expression
+}
+
 static void compilePrintStatement()
 {
 	compileExpression();
@@ -244,16 +289,32 @@ static void compileStatement()
 {
 	if (match(TOKEN_PRINT))
 		compilePrintStatement();
+	else
+		compileExpressionStatement();
+}
+
+static void compileVarDeclaration()
+{
+	uint8_t global = parseVariable("Expected variable name.");
+
+	// must be initialized
+	consume(TOKEN_EQUAL, "Expected initialization of variable after declaration.");
+	compileExpression();
+	consume(TOKEN_SEMICOLON, "Expected ';' after variable declaration.");
+	
+	defineVariable(global);
 }
 
 static void compileDeclaration()
 {
-	compileStatement();
-}
+	if (match(TOKEN_VAR))
+		compileVarDeclaration();
+	else
+		compileStatement();
 
-static void compileExpression()
-{
-	parsePrecedence(PREC_ASSIGNMENT); // start at lowest precedence
+	// recover from panic mode
+	if (parser.panicMode)
+		synchronize();
 }
 
 static void compileGrouping()
@@ -286,6 +347,17 @@ static void compileString()
 	const char* start = parser.previous.start + 1;
 	uint32_t end = parser.previous.length - 2;
 	emitConstant(OBJECT_VAL(copyString(start, end)));
+}
+
+static void compileNamedVariable(Token name)
+{
+	uint8_t arg = parseIdentifierConstant(&name);
+	emitBytes(OP_GET_GLOBAL, arg);
+}
+
+static void compileVariable()
+{
+	compileNamedVariable(parser.previous);
 }
 
 static void compileUnary()
@@ -325,7 +397,7 @@ ParseRule rules[] =
   [TOKEN_GREATER_EQUAL] = {NULL,     compileBinary,   PREC_COMPARISON},
   [TOKEN_LESS]			= {NULL,     compileBinary,   PREC_COMPARISON},
   [TOKEN_LESS_EQUAL]	= {NULL,     compileBinary,   PREC_COMPARISON},
-  [TOKEN_IDENTIFIER]	= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_IDENTIFIER]	= {compileVariable,     NULL,   PREC_NONE},
   [TOKEN_STRING]		= {compileString,     NULL,   PREC_NONE},
   [TOKEN_NUMBER]		= {compileNumber,   NULL,   PREC_NONE},
   [TOKEN_QUESTION]		= {NULL,	NULL,	PREC_NONE},
@@ -370,6 +442,27 @@ static void parsePrecedence(Precedence precedence)
 		ParseFn infixRule = getRule(parser.previous.type)->infix;
 		infixRule();
 	}
+}
+
+static uint8_t parseIdentifierConstant(Token* name)
+{
+	// return a copy of the string as identifier
+	// TODO - take constant string
+	ObjectString* lexeme = copyString(name->start, name->length);
+	// convert to Value and store in const table
+	// TODO - handle LONG, many constants
+	return addConstant(compilingChunk, OBJECT_VAL(lexeme)); //makeConstant(OBJECT_VAL(lexeme));
+}
+
+static uint8_t parseVariable(const char* errorMessage)
+{
+	consume(TOKEN_IDENTIFIER, errorMessage);
+	return parseIdentifierConstant(&parser.previous);
+}
+
+static void defineVariable(uint8_t global)
+{
+	emitBytes(OP_DEFINE_GLOBAL, global);
 }
 
 /// <summary>

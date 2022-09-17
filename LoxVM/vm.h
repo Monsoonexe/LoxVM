@@ -26,6 +26,11 @@ typedef struct
 	ValueArray stack;
 
 	/// <summary>
+	/// Global variables.
+	/// </summary>
+	Table globals;
+
+	/// <summary>
 	/// Hash set of interned strings. 'value' is always 'nil' and meaningless.
 	/// </summary>
 	Table strings;
