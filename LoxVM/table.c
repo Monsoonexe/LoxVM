@@ -14,7 +14,7 @@ inline void initEntry(Entry* entry)
 
 static Entry* findEntry(Entry* entries, uint32_t capacity, ObjectString* key)
 {
-	uint32_t index = key->hash % capacity; //key->hash & (capacity - 1); // modulo
+	uint32_t index = key->hash & (capacity - 1); // fast modulo b.c. power of 2
 	Entry* tombstone = NULL;
 
 	// linear probing
@@ -39,7 +39,7 @@ static Entry* findEntry(Entry* entries, uint32_t capacity, ObjectString* key)
 			return entry;
 		}
 
-		index = (index + 1) % capacity; // loop back // (index + 1) & (capacity - 1)
+		index = (index + 1) & (capacity - 1); // loop around
 	}
 }
 
@@ -129,6 +129,36 @@ void copyTable(Table* src, Table* dest)
 		Entry* entry = &src->entries[i];
 		if (entry->key != NULL)
 			tableSet(dest, entry->key, entry->value);
+	}
+}
+
+ObjectString* tableFindString(Table* table, const char* chars,
+	uint32_t length, uint32_t hash)
+{
+	if (table->count == 0) return NULL;
+
+	uint32_t index = hash & (table->capacity - 1); // fast modulo b.c. power of 2
+
+	while (true)
+	{
+		// iterator
+		Entry* entry = &table->entries[index];
+
+		if (entry->key == NULL)
+		{
+			// stop on non-tombstone entry
+			if (IS_NIL(entry->value)) return NULL;
+		}
+		// compare query and entry
+		else if (entry->key->length == length
+			&& entry->key->hash == hash
+			&& memcmp(entry->key->chars, chars, length) == 0)
+		{
+			return entry->key;
+		}
+
+		// next
+		index = (index + 1) & (table->capacity - 1);
 	}
 }
 

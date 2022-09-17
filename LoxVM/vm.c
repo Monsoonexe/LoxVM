@@ -43,6 +43,8 @@ void freeVM(VM* vm)
 
 	// reset fields
 	initVM(vm);
+
+	freeTable(&vm->strings);
 }
 
 void initVM(VM* vm)
@@ -50,6 +52,7 @@ void initVM(VM* vm)
 	vm->chunk = NULL;
 	vm->ip = NULL;
 	vm->objects = NULL;
+	initTable(&vm->strings);
 }
 
 /// <summary>

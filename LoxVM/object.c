@@ -4,6 +4,7 @@
 
 #include "memory.h"
 #include "object.h"
+#include "table.h"
 #include "value.h"
 #include "vm.h"
 
@@ -39,6 +40,10 @@ static ObjectString* allocateString(const char* chars,
 	string->chars = chars;
 	string->isDynamic = isDynamic;
 	string->hash = hash;
+
+	// intern
+	tableSet(&vm.strings, string, NIL_VAL);
+
 	return string;
 }
 
@@ -61,6 +66,12 @@ ObjectString* copyString(const char* chars, uint32_t length)
 {
 	// clone c-string
 	uint32_t hash = hashString(chars, length);
+
+	// interned string?
+	ObjectString* internedString = tableFindString(&vm.strings, chars, length, hash);
+	if (internedString != NULL) return internedString;
+
+	// new string
 	char* heapChars = ALLOCATE(char, length + 1); // account for \0
 	memcpy(heapChars, chars, length);
 	heapChars[length] = '\0'; // null-terminated!
@@ -87,12 +98,34 @@ void printObject(Value value)
 ObjectString* takeString(const char* chars, uint32_t length)
 {
 	uint32_t hash = hashString(chars, length);
-	return allocateString(chars, length, true, hash);
+
+	// interned string?
+	ObjectString* internedString = tableFindString(&vm.strings, chars, length, hash);
+	if (internedString == NULL)
+	{
+		return allocateString(chars, length, true, hash);
+	}
+	else
+	{
+		FREE_ARRAY(char, chars, length + 1);
+		return internedString;
+	}
 }
 
 ObjectString* takeConstantString(const char* chars, uint32_t length)
 {
 	// TODO - figure out weird bug
 	uint32_t hash = hashString(chars, length);
-	return allocateString(chars, length, false, hash);
+
+	// interned string?
+	ObjectString* internedString = tableFindString(&vm.strings, chars, length, hash);
+	if (internedString == NULL)
+	{
+		return allocateString(chars, length, false, hash);
+	}
+	else
+	{
+		FREE_ARRAY(char, chars, length + 1);
+		return internedString;
+	}
 }

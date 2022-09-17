@@ -1,5 +1,7 @@
 #pragma once
+
 #include "chunk.h"
+#include "table.h"
 #include "value.h"
 
 #define STACK_DEFAULT 256
@@ -22,6 +24,11 @@ typedef struct
 	/// </summary>
 	//Value* sp; // stack.count
 	ValueArray stack;
+
+	/// <summary>
+	/// Hash set of interned strings. 'value' is always 'nil' and meaningless.
+	/// </summary>
+	Table strings;
 
 	/// <summary>
 	/// Root of dynamically-allocated objects linked-list.

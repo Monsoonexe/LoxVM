@@ -33,16 +33,9 @@ bool valuesEqual(Value a, Value b)
 	switch (a.type) // have same type
 	{
 		case VAL_BOOL:	 return AS_BOOL(a) == AS_BOOL(b);
-		case VAL_NIL:	 return true; // nil := nil
+		case VAL_NIL:	 return true; // nil :== nil
 		case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
-		case VAL_OBJECT:
-		{
-			ObjectString* aString = AS_STRING(a);
-			ObjectString* bString = AS_STRING(b);
-			uint32_t aLen = aString->length; // fetch once
-			return aLen == bString->length
-				&& memcmp(aString->chars, bString->chars, aLen) == 0;
-		}
+		case VAL_OBJECT: return AS_OBJECT(a) == AS_OBJECT(b);
 		default: exit(123); // unreachable;
 	}
 }

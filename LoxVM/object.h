@@ -46,6 +46,10 @@ struct ObjectString // challenge: flag as dynamic or static and account as such 
 ObjectString* copyString(const char* chars, uint32_t length);
 void printObject(Value value);
 ObjectString* takeString(const char* chars, uint32_t length);
+
+/// <summary>
+/// Takes ownership of string.
+/// </summary>
 ObjectString* takeConstantString(const char* chars, uint32_t length);
 
 static inline bool isObjectType(Value value, ObjectType type)
