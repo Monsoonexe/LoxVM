@@ -158,10 +158,10 @@ static bool match(TokenType type)
 	return true;
 }
 
-static void patchJump(int32_t offset)
+static void patchJump(uint32_t offset)
 {
 	// -2 to adjust for the jump offset itself
-	int32_t jump = currentChunk()->count - offset - 2;
+	uint32_t jump = currentChunk()->count - offset - 2;
 	if (jump > UINT16_MAX)
 		error("Jump is too far away. Consider implementing a JUMP_LONG instruction.");
 
@@ -204,7 +204,7 @@ static void emitConstant(Value value)
 		emitBytes(OP_CONSTANT, i);
 	}
 }
-static int32_t emitJump(OpCode instruction)
+static uint32_t emitJump(OpCode instruction)
 {
 	emitByte(instruction);
 
@@ -212,6 +212,17 @@ static int32_t emitJump(OpCode instruction)
 	emitByte(0xff);
 	emitByte(0xff); 
 	return currentChunk()->count - 2;
+}
+static void emitLoop(uint32_t loopStart)
+{
+	emitByte(OP_LOOP);
+
+	// get backwards target
+	uint32_t offset = currentChunk()->count - loopStart + 2; // skip args
+	if (offset > UINT16_MAX)
+		error("Loop body too large.");
+
+	emitBytes(((offset >> 8) & 0xff), (offset & 0xff));
 }
 static void emitReturn()
 {
@@ -288,7 +299,7 @@ static void synchronize()
 
 static void compileAnd(bool canAssign)
 {
-	int32_t endJump = emitJump(OP_JUMP_IF_FALSE);
+	uint32_t endJump = emitJump(OP_JUMP_IF_FALSE);
 
 	emitByte(OP_POP); // consume condition
 	parsePrecedence(PREC_AND); // right-hand expression
@@ -298,8 +309,8 @@ static void compileAnd(bool canAssign)
 
 static void compileOr(bool canAssign)
 {
-	int32_t elseJump = emitJump(OP_JUMP_IF_FALSE); // b.c. we don't have OP_JUMP_IF_TRUE
-	int32_t endJump = emitJump(OP_JUMP);
+	uint32_t elseJump = emitJump(OP_JUMP_IF_FALSE); // b.c. we don't have OP_JUMP_IF_TRUE
+	uint32_t endJump = emitJump(OP_JUMP);
 
 	patchJump(elseJump);
 	emitByte(OP_POP);
@@ -379,22 +390,45 @@ static void compilePrintStatement()
 
 static void compileIfStatement()
 {
+	// condition
 	consume(TOKEN_LEFT_PAREN, "Expected '(' after 'if'.");
 	compileExpression();
 	consume(TOKEN_RIGHT_PAREN, "Expected ')' after condition.");
-
-	int32_t thenJump = emitJump(OP_JUMP_IF_FALSE);
+	
+	// handle branching
+	uint32_t thenJump = emitJump(OP_JUMP_IF_FALSE);
 	emitByte(OP_POP); // pop condition
 	compileStatement();
 
-	int32_t elseJump = emitJump(OP_JUMP);
+	uint32_t elseJump = emitJump(OP_JUMP);
 
 	patchJump(thenJump);
 	emitByte(OP_POP); // pop condition
 
+	// else branch
 	if (match(TOKEN_ELSE))
 		compileStatement();
 	patchJump(elseJump);
+}
+
+static void compileWhileStatement()
+{
+	// loop target
+	uint32_t loopStart = currentChunk()->count; // re-evaluate condition each pass
+
+	// condition
+	consume(TOKEN_LEFT_PAREN, "Expected '(' after 'while'.");
+	compileExpression();
+	consume(TOKEN_RIGHT_PAREN, "Expected ')' after condition.");
+
+	// handle jump
+	uint32_t exitJump = emitJump(OP_JUMP_IF_FALSE);
+	emitByte(OP_POP); // pop condition
+	compileStatement(); // body
+	emitLoop(loopStart);
+
+	patchJump(exitJump);
+	emitByte(OP_POP); // pop condition
 }
 
 static void compileStatement()
@@ -406,6 +440,10 @@ static void compileStatement()
 	else if (match(TOKEN_IF))
 	{
 		compileIfStatement();
+	}
+	else if (match(TOKEN_WHILE))
+	{
+		compileWhileStatement();
 	}
 	else if (match(TOKEN_LEFT_BRACE))
 	{

@@ -48,12 +48,21 @@ typedef enum
 	OP_NEGATE,
 
 	// control statements
+	
+	/// <summary>
+	/// Conditional jump forward.
+	/// </summary>
 	OP_JUMP_IF_FALSE,
 
 	/// <summary>
-	/// Unconditional jump.
+	/// Unconditional jump forward.
 	/// </summary>
 	OP_JUMP,
+
+	/// <summary>
+	/// Conditional backwards jump.
+	/// </summary>
+	OP_LOOP,
 
 	OP_PRINT,
 	OP_RETURN,

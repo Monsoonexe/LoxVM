@@ -9,7 +9,7 @@ InterpretResult result;
 
 void printIntro()
 {
-
+	printf("Hello and welcome to the Lox Interpreter!\n\n");
 }
 
 static void repl()
