@@ -158,6 +158,18 @@ static bool match(TokenType type)
 	return true;
 }
 
+static void patchJump(int32_t offset)
+{
+	// -2 to adjust for the jump offset itself
+	int32_t jump = currentChunk()->count - offset - 2;
+	if (jump > UINT16_MAX)
+		error("Jump is too far away. Consider implementing a JUMP_LONG instruction.");
+
+	// update 16 bits now that the address is known
+	currentChunk()->code[offset] = (jump >> 8) & 0xff;
+	currentChunk()->code[offset + 1] = jump & 0xff;
+}
+
 static void emitByte(uint8_t byte)
 {
 	writeChunk(currentChunk(), byte, parser.previous.line);
@@ -191,6 +203,15 @@ static void emitConstant(Value value)
 	{	// short (8-bit) index
 		emitBytes(OP_CONSTANT, i);
 	}
+}
+static int32_t emitJump(OpCode instruction)
+{
+	emitByte(instruction);
+
+	// emit placeholders for jump offset
+	emitByte(0xff);
+	emitByte(0xff); 
+	return currentChunk()->count - 2;
 }
 static void emitReturn()
 {
@@ -334,11 +355,35 @@ static void compilePrintStatement()
 	emitByte(OP_PRINT);
 }
 
+static void compileIfStatement()
+{
+	consume(TOKEN_LEFT_PAREN, "Expected '(' after 'if'.");
+	compileExpression();
+	consume(TOKEN_RIGHT_PAREN, "Expected ')' after condition.");
+
+	int32_t thenJump = emitJump(OP_JUMP_IF_FALSE);
+	emitByte(OP_POP); // pop condition
+	compileStatement();
+
+	int32_t elseJump = emitJump(OP_JUMP);
+
+	patchJump(thenJump);
+	emitByte(OP_POP); // pop condition
+
+	if (match(TOKEN_ELSE))
+		compileStatement();
+	patchJump(elseJump);
+}
+
 static void compileStatement()
 {
 	if (match(TOKEN_PRINT))
 	{
 		compilePrintStatement();
+	}
+	else if (match(TOKEN_IF))
+	{
+		compileIfStatement();
 	}
 	else if (match(TOKEN_LEFT_BRACE))
 	{

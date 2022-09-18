@@ -39,6 +39,16 @@ static uint32_t constantLongInstruction(const char* name,
 	return offset + 4; // op and 3 bytes of index
 }
 
+static uint32_t jumpInstruction(const char* name, int32_t sign,
+	Chunk* chunk, uint32_t offset)
+{
+	uint32_t jump = (uint16_t)(chunk->code[offset + 1] << 8);
+	jump |= (chunk->code[offset + 2] << 0);
+	printf("%-16s %4d -> %d\n", name, offset,
+		offset + 3 + sign * jump);
+	return offset + 3;
+}
+
 static uint32_t simpleInstruction(const char* name, uint32_t offset)
 {
 	printf("%s\n", name);
@@ -138,8 +148,15 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 			return simpleInstruction("OP_DIVIDE", offset);
 		case OP_NEGATE:
 			return simpleInstruction("OP_NEGATE", offset);
+
+		// statements
 		case OP_PRINT:
 			return simpleInstruction("OP_PRINT", offset);
+		case OP_JUMP:
+			return jumpInstruction("OP_JUMP", 1, chunk, offset);
+		case OP_JUMP_IF_FALSE:
+			return jumpInstruction("OP_JUMP_IF_FALSE", 1, chunk, offset);
+
 		case OP_RETURN:
 			return simpleInstruction("OP_RETURN", offset);
 		default:

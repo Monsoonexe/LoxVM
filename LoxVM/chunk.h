@@ -7,8 +7,11 @@
 
 typedef enum
 {
+	// constants
 	OP_CONSTANT,
 	OP_CONSTANT_LONG,
+
+	// literals
 	OP_ZERO,
 	OP_ONE,
 	OP_NEG_ONE,
@@ -30,7 +33,11 @@ typedef enum
 	OP_GET_GLOBAL, // TODO - LONG
 	OP_SET_GLOBAL, // TODO - LONG
 	OP_DEFINE_GLOBAL,
+
+	// assignment
 	OP_EQUAL,
+
+	// boolean
 	OP_GREATER, // TODO: <= >=
 	OP_LESS,
 	OP_ADD,
@@ -39,6 +46,15 @@ typedef enum
 	OP_DIVIDE,
 	OP_NOT,
 	OP_NEGATE,
+
+	// control statements
+	OP_JUMP_IF_FALSE,
+
+	/// <summary>
+	/// Unconditional jump.
+	/// </summary>
+	OP_JUMP,
+
 	OP_PRINT,
 	OP_RETURN,
 } OpCode;
