@@ -344,6 +344,14 @@ static void compileBinary(bool canAssign)
 	}
 }
 
+static void compileBreak(bool canAssign)
+{
+	consume(TOKEN_SEMICOLON, "Expected ';' after 'break'.");
+	// emitJump
+	//TODO - figure out how many bytes are between me and end of loop and push that many
+	//TODO - verify is inside loop
+}
+
 static void compileTrue(bool canAssign)
 {
 	emitByte(OP_TRUE);
@@ -398,7 +406,7 @@ static void compileIfStatement()
 	// handle branching
 	uint32_t thenJump = emitJump(OP_JUMP_IF_FALSE);
 	emitByte(OP_POP); // pop condition
-	compileStatement();
+	compileStatement(); // true body
 
 	uint32_t elseJump = emitJump(OP_JUMP);
 
@@ -407,7 +415,7 @@ static void compileIfStatement()
 
 	// else branch
 	if (match(TOKEN_ELSE))
-		compileStatement();
+		compileStatement(); // false body
 	patchJump(elseJump);
 }
 
@@ -431,6 +439,22 @@ static void compileWhileStatement()
 	emitByte(OP_POP); // pop condition
 }
 
+static void compileForStatement()
+{
+	// initializer
+	consume(TOKEN_LEFT_PAREN, "Expected '(' after 'for'.");
+	consume(TOKEN_SEMICOLON, "Expected ';'.");
+
+	// condition
+	uint32_t loopStart = currentChunk()->count;
+	consume(TOKEN_SEMICOLON, "Expected ';'.");
+	consume(TOKEN_RIGHT_PAREN, "Expected ')' after for-clauses.");
+
+	// body
+	compileStatement();
+	emitLoop(loopStart); // loop back
+}
+
 static void compileStatement()
 {
 	if (match(TOKEN_PRINT))
@@ -440,6 +464,10 @@ static void compileStatement()
 	else if (match(TOKEN_IF))
 	{
 		compileIfStatement();
+	}
+	else if (match(TOKEN_FOR))
+	{
+		compileForStatement();
 	}
 	else if (match(TOKEN_WHILE))
 	{
@@ -591,6 +619,7 @@ ParseRule rules[] =
   [TOKEN_QUESTION]		= {NULL,	NULL,	PREC_NONE},
   [TOKEN_COLON]			= {NULL,	NULL,	PREC_NONE},
   [TOKEN_AND]			= {NULL,     compileAnd,   PREC_AND},
+  [TOKEN_BREAK]			= {compileBreak,     NULL,   PREC_NONE},
   [TOKEN_CLASS]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_ELSE]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_FALSE]			= {compileFalse,     NULL,   PREC_NONE},
