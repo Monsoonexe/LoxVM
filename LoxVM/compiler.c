@@ -286,6 +286,28 @@ static void synchronize()
 	}
 }
 
+static void compileAnd(bool canAssign)
+{
+	int32_t endJump = emitJump(OP_JUMP_IF_FALSE);
+
+	emitByte(OP_POP); // consume condition
+	parsePrecedence(PREC_AND); // right-hand expression
+	
+	patchJump(endJump);
+}
+
+static void compileOr(bool canAssign)
+{
+	int32_t elseJump = emitJump(OP_JUMP_IF_FALSE); // b.c. we don't have OP_JUMP_IF_TRUE
+	int32_t endJump = emitJump(OP_JUMP);
+
+	patchJump(elseJump);
+	emitByte(OP_POP);
+
+	parsePrecedence(PREC_OR); // right-hand expression
+	patchJump(endJump);
+}
+
 static void compileBinary(bool canAssign)
 {
 	TokenType operatorType = parser.previous.type;
@@ -530,7 +552,7 @@ ParseRule rules[] =
   [TOKEN_NUMBER]		= {compileNumber,   NULL,   PREC_NONE},
   [TOKEN_QUESTION]		= {NULL,	NULL,	PREC_NONE},
   [TOKEN_COLON]			= {NULL,	NULL,	PREC_NONE},
-  [TOKEN_AND]			= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_AND]			= {NULL,     compileAnd,   PREC_AND},
   [TOKEN_CLASS]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_ELSE]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_FALSE]			= {compileFalse,     NULL,   PREC_NONE},
@@ -538,7 +560,7 @@ ParseRule rules[] =
   [TOKEN_FUN]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_IF]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_NIL]			= {compileNil,     NULL,   PREC_NONE},
-  [TOKEN_OR]			= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_OR]			= {NULL,     compileOr,   PREC_OR},
   [TOKEN_PRINT]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_RETURN]		= {NULL,     NULL,   PREC_NONE},
   [TOKEN_SUPER]			= {NULL,     NULL,   PREC_NONE},
