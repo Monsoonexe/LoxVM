@@ -61,6 +61,7 @@ static uint8_t parseVariable(const char* errorMessage);
 static void defineVariable(uint8_t global);
 static uint32_t parseIdentifierConstant(Token* name);
 static int32_t resolveLocal(Compiler* compiler, Token* name);
+static void compileVarDeclaration();
 
 void initCompiler(Compiler* compiler)
 {
@@ -441,18 +442,65 @@ static void compileWhileStatement()
 
 static void compileForStatement()
 {
-	// initializer
+	beginScope();
+
+	// initializer clause
 	consume(TOKEN_LEFT_PAREN, "Expected '(' after 'for'.");
+	if (match(TOKEN_SEMICOLON))
+	{
+		// no initializer
+	}
+	else if (match(TOKEN_VAR))
+	{
+		compileVarDeclaration();
+	}
+	else
+	{
+		compileExpressionStatement();
+	}
 	consume(TOKEN_SEMICOLON, "Expected ';'.");
 
-	// condition
+	// condition clause
 	uint32_t loopStart = currentChunk()->count;
-	consume(TOKEN_SEMICOLON, "Expected ';'.");
-	consume(TOKEN_RIGHT_PAREN, "Expected ')' after for-clauses.");
+	bool hasCondition = false;
+	uint32_t exitJump = 0;
+	if (!match(TOKEN_SEMICOLON)) // is optional
+	{
+		hasCondition = true;
+		compileExpression();
+		consume(TOKEN_SEMICOLON, "Expected ';' after loop condition.");
+
+		// jump out of loop if false
+		exitJump = emitJump(OP_JUMP_IF_FALSE);
+		emitByte(OP_POP); // discard result of condition
+	}
+
+	// incrementer clause
+	if (!match(TOKEN_RIGHT_PAREN))
+	{
+		// b.c. single-pass compiler, jump over inc, do body, then jump back to inc.
+		uint32_t bodyJump = emitJump(OP_JUMP);
+		uint32_t incrementStart = currentChunk()->count;
+		compileExpression();
+		emitByte(OP_POP); // discard result of operation
+		consume(TOKEN_RIGHT_PAREN, "Expected ')' after for-clauses.");
+
+		emitLoop(loopStart); // skip increment on first pass
+		loopStart = incrementStart; // increment first, then check condition
+		patchJump(bodyJump);
+	}
 
 	// body
 	compileStatement();
 	emitLoop(loopStart); // loop back
+
+	if (hasCondition)
+	{
+		patchJump(exitJump);
+		emitByte(OP_POP);
+	}
+
+	endScope();
 }
 
 static void compileStatement()
