@@ -62,6 +62,20 @@ static uint32_t hashString(const char* key, uint32_t length)
 	return hash;
 }
 
+static void printFunction(ObjectFunction* function)
+{
+	printf("<fn> %s>", function->name->chars);
+}
+
+ObjectFunction* newFunction()
+{
+	ObjectFunction* function = ALLOCATE_OBJECT(ObjectFunction, OBJECT_FUNCTION);
+	function->arity = 0;
+	function->name = NULL;
+	initChunk(&function->chunk);
+	return function;
+}
+
 ObjectString* copyString(const char* chars, uint32_t length)
 {
 	// clone c-string
@@ -84,13 +98,11 @@ void printObject(Value value)
 {
 	switch (OBJECT_TYPE(value))
 	{
-		case OBJECT_STRING:
-			printf("%s", AS_CSTRING(value));
-			break;
-		case OBJECT_FUNCTION:
+		case OBJECT_FUNCTION: printFunction(AS_FUNCTION(value)); break;
 		case OBJECT_INSTANCE:
 			printf("%d", OBJECT_TYPE(value));
 			break;
+		case OBJECT_STRING: printf("%s", AS_CSTRING(value)); break;
 		default: exit(123); // unreachable
 	}
 }

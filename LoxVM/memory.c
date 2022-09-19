@@ -9,6 +9,14 @@ static void freeObject(Object* object)
 {
 	switch (object->type)
 	{
+		case OBJECT_FUNCTION:
+		{
+			ObjectFunction* function = (ObjectFunction*)object;
+			freeChunk(&function->chunk);
+			FREE(ObjectFunction, object);
+			// GC will handle the 'name' string
+			break;
+		}
 		case OBJECT_STRING:
 		{
 			ObjectString* string = (ObjectString*)object;

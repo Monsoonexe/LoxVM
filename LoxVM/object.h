@@ -1,4 +1,6 @@
 #pragma once
+
+#include "chunk.h"
 #include "common.h"
 #include "value.h"
 #include "vm.h"
@@ -6,19 +8,20 @@
 #define OBJECT_TYPE(value)		(AS_OBJECT(value)->type)
 
 // type querries
-#define IS_STRING(value)		isObjectType(value, OBJECT_STRING)
-#define IS_INSTANCE(value)		isObjectType(value, OBJECT_INSTANCE)
 #define IS_FUNCTION(value)		isObjectType(value, OBJECT_FUNCTION)
+#define IS_INSTANCE(value)		isObjectType(value, OBJECT_INSTANCE)
+#define IS_STRING(value)		isObjectType(value, OBJECT_STRING)
 
 // type casts
+#define AS_FUNCTION(value)		((ObjectFunction*)AS_OBJECT(value))
 #define AS_STRING(value)		((ObjectString*)AS_OBJECT(value))
 #define AS_CSTRING(value)		(((ObjectString*)AS_OBJECT(value))->chars)
 
 typedef enum
 {
-	OBJECT_STRING,
-	OBJECT_INSTANCE,
 	OBJECT_FUNCTION,
+	OBJECT_INSTANCE,
+	OBJECT_STRING,
 } ObjectType;
 
 /// <summary>
@@ -29,6 +32,14 @@ struct Object
 	ObjectType type;
 	struct Object* next; //linked list node
 };
+
+typedef struct
+{
+	Object object; // header
+	uint32_t arity;
+	Chunk chunk;
+	ObjectString* name;
+} ObjectFunction;
 
 /// <summary>
 /// Underlying string type in Lox.
@@ -43,6 +54,11 @@ struct ObjectString // challenge: flag as dynamic or static and account as such 
 	uint32_t hash;
 };
 
+/// <summary>
+/// Like a default constructor.
+/// </summary>
+/// <returns>New instance of a function.</returns>
+ObjectFunction* newFunction();
 ObjectString* copyString(const char* chars, uint32_t length);
 void printObject(Value value);
 ObjectString* takeString(const char* chars, uint32_t length);
