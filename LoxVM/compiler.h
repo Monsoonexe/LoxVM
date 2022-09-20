@@ -1,7 +1,11 @@
 #pragma once
+
 #include "object.h"
 #include "scanner.h"
 #include "vm.h"
+
+// test this
+#define MAX_NESTED_CALLS UINT16_MAX
 
 typedef struct
 {
@@ -17,6 +21,7 @@ typedef enum
 
 typedef struct
 {
+	struct Compiler* enclosing;
 	ObjectFunction* function;
 	FunctionType type;
 

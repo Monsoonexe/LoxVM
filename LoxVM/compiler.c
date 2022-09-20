@@ -49,7 +49,6 @@ typedef struct
 
 Parser parser;
 Compiler* current = NULL;
-Chunk* compilingChunk; // TODO - remove from global state
 
 // prototypes
 static void compileExpression();
@@ -57,14 +56,15 @@ static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 static void compileStatement();
 static void compileDeclaration();
-static uint8_t parseVariable(const char* errorMessage);
-static void defineVariable(uint8_t global);
+static uint32_t parseVariable(const char* errorMessage);
+static void defineVariable(uint32_t global);
 static uint32_t parseIdentifierConstant(Token* name);
 static int32_t resolveLocal(Compiler* compiler, Token* name);
 static void compileVarDeclaration();
 
 void initCompiler(Compiler* compiler, FunctionType type)
 {
+	compiler->enclosing = current; // push compiler
 	compiler->function = NULL;
 	compiler->type = type;
 	compiler->localCount = 0;
@@ -74,6 +74,12 @@ void initCompiler(Compiler* compiler, FunctionType type)
 	compiler->function = newFunction();
 
 	current = compiler;
+	if (type != TYPE_SCRIPT) // track function name
+	{
+		// copy string so function can outlive compiler into interpreter
+		current->function->name = copyString(parser.previous.start,
+			parser.previous.length);
+	}
 
 	// claim a temp variable at local[0]
 	Local* local = &current->locals[current->localCount++];
@@ -84,7 +90,7 @@ void initCompiler(Compiler* compiler, FunctionType type)
 
 static Chunk* currentChunk()
 {
-	return compilingChunk; // don't ask where I got it from
+	return &current->function->chunk;
 }
 
 static void initParser(Parser* parser)
@@ -171,6 +177,19 @@ static bool match(TokenType type)
 	return true;
 }
 
+/// <summary>
+/// Marks the variable at the top of the locals stack as initialized.
+/// Now is ready for use.
+/// </summary>
+static void markInitialized()
+{
+	if (current->scopeDepth == 0) return; // skip globals
+
+	// top of the variable stack is now init'd
+	current->locals[current->localCount - 1].depth =
+		current->scopeDepth;
+}
+
 static void patchJump(uint32_t offset)
 {
 	// -2 to adjust for the jump offset itself
@@ -201,14 +220,12 @@ static void emitConstant(Value value)
 		return;
 	}
 
-	// special-case values
-
 	// emit constant
 	uint32_t i = addConstant(currentChunk(), value);
 	if (constantCount >= UINT8_MAX)
 	{	// long (24-bit) index
 		emitByte(OP_CONSTANT_LONG);
-		emitByte((uint8_t)(i >> 16));
+		emitByte((uint8_t)(i >> 16)); // consider '& 0xff'
 		emitByte((uint8_t)(i >> 8));
 		emitByte((uint8_t)(i >> 0));
 	}
@@ -253,6 +270,7 @@ static ObjectFunction* endCompiler()
 			function->name->chars : "<script>");
 #endif
 
+	current = current->enclosing; // pop compiler
 	return function;
 }
 
@@ -552,7 +570,7 @@ static void compileStatement()
 
 static void compileVarDeclaration()
 {
-	uint8_t global = parseVariable("Expected variable name.");
+	uint32_t global = parseVariable("Expected variable name.");
 
 	// must be initialized
 	consume(TOKEN_EQUAL, "Expected initialization of variable after declaration.");
@@ -562,10 +580,60 @@ static void compileVarDeclaration()
 	defineVariable(global);
 }
 
+static void compileFunction(FunctionType type)
+{
+	// guard against C-stackoverflow
+	if (current->scopeDepth > MAX_NESTED_CALLS)
+	{
+		error("Max nested function calls reached.");
+		return;
+	}
+
+	Compiler compiler;
+	initCompiler(&compiler, type); // set as active compiler for emitters
+	beginScope(); // endScope called on exit of function body
+
+	// parameter list
+	consume(TOKEN_LEFT_PAREN, "Expected '(' after function name.");
+
+	if (!check(TOKEN_RIGHT_PAREN))
+	{
+		do
+		{
+			++current->function->arity;
+			if (current->function->arity > UINT8_MAX)
+				errorAtCurrent("Can't have more than 255 parameters.");
+
+			uint32_t constant = parseVariable("Expected parameter name.");
+			defineVariable(constant);
+		} while (match(TOKEN_COMMA));
+	}
+	consume(TOKEN_RIGHT_PAREN, "Expected ')' after parameter list.");
+
+	// body
+	consume(TOKEN_LEFT_BRACE, "Expected '{' before function body.");
+	compileBlock();
+
+	// create object
+	ObjectFunction* function = endCompiler();
+	emitConstant(OBJECT_VAL(function));
+}
+
+static void compileFunDeclaration()
+{
+	uint32_t global = parseVariable("Expected function name.");
+
+	markInitialized();
+	compileFunction(TYPE_FUNCTION); // stores function on stack
+	defineVariable(global); //put function in variable
+}
+
 static void compileDeclaration()
 {
 	if (match(TOKEN_VAR))
 		compileVarDeclaration();
+	else if (match(TOKEN_FUN))
+		compileFunDeclaration();
 	else
 		compileStatement();
 
@@ -609,7 +677,7 @@ static void compileString(bool canAssign)
 static void compileNamedVariable(Token name, bool canAssign)
 {
 	uint8_t getOp, setOp; // bytecode to be emitted
-	int32_t arg = resolveLocal(current, &name);
+	uint32_t arg = resolveLocal(current, &name);
 
 	// local or global resolution
 	if (arg == -1)
@@ -769,7 +837,6 @@ static int32_t resolveLocal(Compiler* compiler, Token* name)
 
 			return i;
 		}
-
 	}
 
 	// not found in locals -- global
@@ -805,10 +872,10 @@ static uint32_t parseIdentifierConstant(Token* name)
 	ObjectString* lexeme = copyString(name->start, name->length);
 	// convert to Value and store in const table
 	// TODO - handle LONG, many constants
-	return addConstant(compilingChunk, OBJECT_VAL(lexeme)); //makeConstant(OBJECT_VAL(lexeme));
+	return addConstant(currentChunk(), OBJECT_VAL(lexeme)); //makeConstant(OBJECT_VAL(lexeme));
 }
 
-static uint8_t parseVariable(const char* errorMessage)
+static uint32_t parseVariable(const char* errorMessage)
 {
 	consume(TOKEN_IDENTIFIER, errorMessage);
 
@@ -820,18 +887,8 @@ static uint8_t parseVariable(const char* errorMessage)
 	return parseIdentifierConstant(&parser.previous);
 }
 
-/// <summary>
-/// Marks the variable at the top of the locals stack as initialized.
-/// Now is ready for use.
-/// </summary>
-static void markInitialized()
-{
-	// top of the variable stack is now init'd
-	current->locals[current->localCount - 1].depth =
-		current->scopeDepth;
-}
-
-static void defineVariable(uint8_t global)
+// TODO - support OP_DEFINE_GLOBAL_LONG
+static void defineVariable(uint32_t global)
 {
 	// don't define local variables
 	if (current->scopeDepth > 0)
@@ -840,7 +897,7 @@ static void defineVariable(uint8_t global)
 		return;
 	}
 
-	emitBytes(OP_DEFINE_GLOBAL, global);
+	emitBytes(OP_DEFINE_GLOBAL, global & 0xff);
 }
 
 /// <summary>
