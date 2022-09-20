@@ -20,7 +20,7 @@ typedef struct
 	/// <summary>
 	/// Frame pointer;
 	/// </summary>
-	ValueArray* slots; // frame pointer locals and args?
+	Value* slots; // frame pointer locals and args?
 } CallFrame;
 
 typedef struct

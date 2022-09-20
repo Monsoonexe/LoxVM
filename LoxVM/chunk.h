@@ -64,6 +64,11 @@ typedef enum
 	/// </summary>
 	OP_LOOP,
 
+	/// <summary>
+	/// Function call.
+	/// </summary>
+	OP_CALL,
+
 	OP_PRINT,
 	OP_RETURN,
 } OpCode;

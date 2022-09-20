@@ -408,6 +408,23 @@ static void compileExpression()
 	parsePrecedence(PREC_ASSIGNMENT); // start at lowest precedence
 }
 
+static uint8_t compileArgumentList()
+{
+	uint8_t argCount = 0; // return value
+	if (!check(TOKEN_RIGHT_PAREN))
+	{
+		do
+		{
+			compileExpression();
+			if (argCount == UINT8_MAX)
+				error("Can't have more than 255 arguments.");
+			++argCount;
+		} while (match(TOKEN_COMMA));
+	}
+	consume(TOKEN_RIGHT_PAREN, "Expected ')' after arguments.");
+	return argCount;
+}
+
 static void compileBlock()
 {
 	while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF))
@@ -416,6 +433,12 @@ static void compileBlock()
 	}
 
 	consume(TOKEN_RIGHT_BRACE, "Expected '}' after block.");
+}
+
+static void compileCall(bool canAssign)
+{
+	uint8_t argCount = compileArgumentList();
+	emitBytes(OP_CALL, argCount);
 }
 
 static void compileExpressionStatement()
@@ -727,7 +750,7 @@ static void compileUnary(bool canAssign)
 
 ParseRule rules[] =
 {
-  [TOKEN_LEFT_PAREN]	= {compileGrouping, NULL,   PREC_NONE},
+  [TOKEN_LEFT_PAREN]	= {compileGrouping, compileCall,   PREC_CALL},
   [TOKEN_RIGHT_PAREN]	= {NULL,     NULL,   PREC_NONE},
   [TOKEN_LEFT_BRACE]	= {NULL,     NULL,   PREC_NONE},
   [TOKEN_RIGHT_BRACE]	= {NULL,     NULL,   PREC_NONE},

@@ -92,6 +92,47 @@ static Value peek(uint32_t distance)
 	return vm.stack.values[top - distance];
 }
 
+bool call(ObjectFunction* function, uint8_t argCount)
+{
+	// validate number of arguments against parameters
+	if (argCount != function->arity)
+	{
+		runtimeError("Expected %d arguments but got %d.",
+			function->arity, argCount);
+		return false;
+	}
+
+	// guard against stack overflow
+	if (vm.frameCount == FRAMES_MAX)
+	{
+		runtimeError("Stack overflow.");
+		return false;
+	}
+
+	// setup call frame
+	CallFrame* frame = &vm.callStack[vm.frameCount++];
+	frame->function = function;
+	frame->ip = function->chunk.code;
+	// slots are function name and parameters
+	frame->slots = &vm.stack.values[vm.stack.count - argCount - 1];
+	return true;
+}
+
+bool callValue(Value callee, uint8_t argCount)
+{
+	if (IS_OBJECT(callee))
+	{
+		switch (OBJECT_TYPE(callee))
+		{
+			case OBJECT_FUNCTION:
+				return call(AS_FUNCTION(callee), argCount);
+			default: break; // error
+		}
+	}
+	runtimeError("Can only call functions and classes.");
+	return false;
+}
+
 static bool isFalsey(Value value)
 {
 	return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
@@ -185,14 +226,14 @@ static InterpretResult run()
 		case OP_GET_LOCAL:
 		{
 			uint8_t slot = READ_BYTE();
-			push(frame->slots->values[slot]);
+			push(frame->slots[slot]);
 			break;
 		}
 		case OP_SET_LOCAL:
 		{
 			// leave val on stack to support 'a = b = c = 10;'
 			uint8_t slot = READ_BYTE();
-			frame->slots->values[slot] = peek(0);
+			frame->slots[slot] = peek(0);
 			break;
 		}
 		case OP_GET_GLOBAL:
@@ -318,6 +359,14 @@ static InterpretResult run()
 			frame->ip -= offset;
 			break;
 		}
+		case OP_CALL:
+		{
+			uint8_t argCount = READ_BYTE();
+			if (!callValue(peek(argCount), argCount))
+				return INTERPRET_RUNTIME_ERROR;
+			frame = &vm.callStack[vm.frameCount - 1];
+			break;
+		}
 		case OP_PRINT:
 		{
 			printValue(pop());
@@ -351,10 +400,7 @@ InterpretResult interpret(const char* source)
 	if (function == NULL) return INTERPRET_COMPILE_ERROR;
 
 	push(OBJECT_VAL(function));
-	CallFrame* frame = &vm.callStack[vm.frameCount++];
-	frame->function = function;
-	frame->ip = function->chunk.code;
-	frame->slots = &vm.stack;
+	call(function, 0); // main()
 
 	return run();
 }
