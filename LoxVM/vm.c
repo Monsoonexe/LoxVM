@@ -66,11 +66,19 @@ static void runtimeError(const char* format, ...)
 	va_end(args);
 	fputs("\n", stderr);
 
-	// log line number
-	CallFrame* frame = &vm.callStack[vm.frameCount - 1];
-	size_t instruction = frame->ip - frame->function->chunk.code - 1; // prev instruction is culprit
-	uint32_t line = frame->function->chunk.lines[instruction];
-	fprintf(stderr, "[line %d] in script\n", line);
+	// stack trace
+	for (int32_t i = vm.frameCount - 1; i >= 0; --i)
+	{
+		CallFrame* frame = &vm.callStack[vm.frameCount - 1];
+		ObjectFunction* function = frame->function;
+		size_t instruction = frame->ip - function->chunk.code - 1; // prev instruction is culprit
+		uint32_t line = function->chunk.lines[instruction];
+		fprintf(stderr, "[line %d] in script\n", line);
+		if (function->name == NULL)
+			fprintf(stderr, "script\n");
+		else
+			fprintf(stderr, "%s()\n", function->name->chars);
+	}
 
 	// reset state
 	resetStack();
