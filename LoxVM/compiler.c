@@ -63,11 +63,23 @@ static uint32_t parseIdentifierConstant(Token* name);
 static int32_t resolveLocal(Compiler* compiler, Token* name);
 static void compileVarDeclaration();
 
-void initCompiler(Compiler* compiler)
+void initCompiler(Compiler* compiler, FunctionType type)
 {
+	compiler->function = NULL;
+	compiler->type = type;
 	compiler->localCount = 0;
 	compiler->scopeDepth = 0;
+
+	// create entrypoint (like 'main')
+	compiler->function = newFunction();
+
 	current = compiler;
+
+	// claim a temp variable at local[0]
+	Local* local = &current->locals[current->localCount++];
+	local->depth = 0;
+	local->name.start = "";
+	local->name.length = 0;
 }
 
 static Chunk* currentChunk()
@@ -230,13 +242,18 @@ static void emitReturn()
 	emitByte(OP_RETURN);
 }
 
-static void endCompiler()
+static ObjectFunction* endCompiler()
 {
 	emitReturn();
+	ObjectFunction* function = current->function; // return value
+
 #ifdef DEBUG_PRINT_CODE
 	if (!parser.hadError)
-		disassembleChunk(currentChunk(), "code");
+		disassembleChunk(currentChunk(), function->name != NULL ?
+			function->name->chars : "<script>");
 #endif
+
+	return function;
 }
 
 static void beginScope()
@@ -837,20 +854,19 @@ static ParseRule* getRule(TokenType type)
 /// <summary>
 /// Main
 /// </summary>
-bool compile(const char* source, Chunk* chunk)
+ObjectFunction* compile(const char* source)
 {
 	uint32_t line = -1;
 	Compiler compiler;
-	compilingChunk = chunk;
 	initScanner(source);
 	initParser(&parser);
-	initCompiler(&compiler);
+	initCompiler(&compiler, TYPE_SCRIPT);
 
 	advance(); // prime the pump
 
 	while (!match(TOKEN_EOF))
 		compileDeclaration();
 
-	endCompiler();
-	return !parser.hadError;
+	ObjectFunction* function = endCompiler();
+	return parser.hadError ? NULL : function;
 }

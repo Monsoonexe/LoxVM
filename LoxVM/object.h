@@ -33,13 +33,13 @@ struct Object
 	struct Object* next; //linked list node
 };
 
-typedef struct
+struct ObjectFunction
 {
 	Object object; // header
 	uint32_t arity;
 	Chunk chunk;
 	ObjectString* name;
-} ObjectFunction;
+};
 
 /// <summary>
 /// Underlying string type in Lox.

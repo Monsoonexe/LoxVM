@@ -1,23 +1,32 @@
 #pragma once
 
-#include "chunk.h"
+#include "object.h"
 #include "table.h"
 #include "value.h"
 
-#define STACK_DEFAULT 256
+#define FRAMES_MAX 64
+
+#define STACK_DEFAULT (FRAMES_MAX * 256)
 
 typedef struct
 {
-	/// <summary>
-	/// Working set of instructions to execute.
-	/// </summary>
-	Chunk* chunk;
+	ObjectFunction* function;
 
 	/// <summary>
-	/// Instruction pointer / program counter. <br/>
-	/// Points to the next instruction to be executed.
+	/// 
 	/// </summary>
-	uint8_t* ip; // consider keeping in a register
+	uint8_t* ip; // return address
+
+	/// <summary>
+	/// Frame pointer;
+	/// </summary>
+	ValueArray* slots; // frame pointer locals and args?
+} CallFrame;
+
+typedef struct
+{
+	CallFrame callStack[FRAMES_MAX];
+	uint32_t frameCount;
 
 	/// <summary>
 	/// Points to where the next value will go.

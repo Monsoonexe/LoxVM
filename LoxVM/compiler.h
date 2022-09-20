@@ -9,12 +9,21 @@ typedef struct
 	uint32_t depth;
 } Local;
 
+typedef enum
+{
+	TYPE_FUNCTION,
+	TYPE_SCRIPT,
+} FunctionType;
+
 typedef struct
 {
+	ObjectFunction* function;
+	FunctionType type;
+
 	Local locals[UINT8_COUNT];
 	uint32_t scopeDepth;
 	int32_t localCount;
 } Compiler;
 
-bool compile(const char* source, Chunk* chunk);
-void initCompiler(Compiler* compiler);
+ObjectFunction* compile(const char* source);
+void initCompiler(Compiler* compiler, FunctionType type);

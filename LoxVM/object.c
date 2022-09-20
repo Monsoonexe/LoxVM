@@ -64,7 +64,10 @@ static uint32_t hashString(const char* key, uint32_t length)
 
 static void printFunction(ObjectFunction* function)
 {
-	printf("<fn> %s>", function->name->chars);
+	if (function->name == NULL)
+		printf("<script>");
+	else
+		printf("<fn> %s>", function->name->chars);
 }
 
 ObjectFunction* newFunction()
