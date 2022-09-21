@@ -182,6 +182,7 @@
     <ClCompile Include="debug.c" />
     <ClCompile Include="Main.c" />
     <ClCompile Include="memory.c" />
+    <ClCompile Include="nativeFunctions.c" />
     <ClCompile Include="object.c" />
     <ClCompile Include="scanner.c" />
     <ClCompile Include="table.c" />
@@ -194,6 +195,7 @@
     <ClInclude Include="compiler.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="memory.h" />
+    <ClInclude Include="nativeFunctions.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="scanner.h" />
     <ClInclude Include="table.h" />
