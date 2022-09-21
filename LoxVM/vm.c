@@ -440,11 +440,13 @@ static InterpretResult run()
 				return INTERPRET_OK; // exit
 			}
 
-			vm.stack.values = frame->slots;
+			// deallocate locals, args, function name
+			uint32_t locals = (&vm.stack.values[vm.stack.count] - frame->slots);
+			vm.stack.count -= locals;
 
 			// return statement
 			push(result); // set return value
-			frame = &vm.callStack[vm.frameCount - 1]; // restore previous base pointer
+			frame = &vm.callStack[count - 1]; // restore previous base pointer
 			break;
 		}
 		default:
