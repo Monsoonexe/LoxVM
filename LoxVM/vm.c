@@ -372,7 +372,7 @@ static InterpretResult run()
 			uint8_t argCount = READ_BYTE();
 			if (!callValue(peek(argCount), argCount))
 				return INTERPRET_RUNTIME_ERROR;
-			frame = &vm.callStack[vm.frameCount - 1];
+			frame = &vm.callStack[vm.frameCount - 1]; // set base pointer
 			break;
 		}
 		case OP_PRINT:
@@ -383,8 +383,21 @@ static InterpretResult run()
 		}
 		case OP_RETURN:
 		{
-			// exit interpreter
-			return INTERPRET_OK;
+			Value result = pop(); // the return value
+			uint32_t count = --vm.frameCount; // pop callstack
+
+			// is program complete
+			if (count == 0)
+			{
+				pop(); // pop main()
+				return INTERPRET_OK; // exit
+			}
+
+			vm.stack.values = frame->slots;
+
+			// return statement
+			push(result); // set return value
+			frame = &vm.callStack[vm.frameCount - 1]; // restore previous base pointer
 		}
 		default:
 			return INTERPRET_RUNTIME_ERROR;

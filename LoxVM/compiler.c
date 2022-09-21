@@ -256,6 +256,7 @@ static void emitLoop(uint32_t loopStart)
 }
 static void emitReturn()
 {
+	emitByte(OP_NIL);
 	emitByte(OP_RETURN);
 }
 
