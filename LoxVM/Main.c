@@ -13,7 +13,7 @@ void printIntro()
 	printf("Hello and welcome to the Lox Interpreter!\n\n");
 }
 
-static uint64_t repl()
+static int64_t repl()
 {
 	char line[1024];
 	while (true)
@@ -76,7 +76,7 @@ static char* readFile(const char* path)
 	return buffer;
 }
 
-static uint64_t runFile(const char* path)
+static int64_t runFile(const char* path)
 {
 	char* source = readFile(path);
 	result = interpret(source);
@@ -84,7 +84,7 @@ static uint64_t runFile(const char* path)
 	return vm.exitCode;
 }
 
-int32_t getErrorCode(InterpretResult result, uint64_t userExitCode)
+int64_t getErrorCode(InterpretResult result, int64_t userExitCode)
 {
 	if (result == INTERPRET_COMPILE_ERROR)
 		return 65;
@@ -104,9 +104,9 @@ void writeTonsOfConstants(Chunk* chunk)
 	}
 }
 
-int32_t main(int argc, char* argv[])
+int64_t main(int argc, char* argv[])
 {
-	uint64_t userExitCode;
+	int64_t userExitCode;
 	printIntro();
 
 	initVM(&vm);
