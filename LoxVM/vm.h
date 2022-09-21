@@ -1,6 +1,7 @@
 #pragma once
 
 #include "object.h"
+#include "nativeFunctions.h"
 #include "table.h"
 #include "value.h"
 

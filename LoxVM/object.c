@@ -79,6 +79,13 @@ ObjectFunction* newFunction()
 	return function;
 }
 
+ObjectNative* newNativeFunction(NativeFn function)
+{
+	ObjectNative* native = ALLOCATE_OBJECT(ObjectNative, OBJECT_NATIVE); // new fn
+	native->function = function;
+	return native;
+}
+
 ObjectString* copyString(const char* chars, uint32_t length)
 {
 	// clone c-string
@@ -102,10 +109,9 @@ void printObject(Value value)
 	switch (OBJECT_TYPE(value))
 	{
 		case OBJECT_FUNCTION: printFunction(AS_FUNCTION(value)); break;
-		case OBJECT_INSTANCE:
-			printf("%d", OBJECT_TYPE(value));
-			break;
+		case OBJECT_INSTANCE: printf("%d", OBJECT_TYPE(value)); break;
 		case OBJECT_STRING: printf("%s", AS_CSTRING(value)); break;
+		case OBJECT_NATIVE: printf("<native fn>"); break;
 		default: exit(123); // unreachable
 	}
 }

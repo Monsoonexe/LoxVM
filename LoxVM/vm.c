@@ -10,6 +10,9 @@
 #include "value.h"
 #include "vm.h"
 
+// prototypes
+static void defineNativeFunction(const char* name, NativeFn function);
+
 VM vm;
 
 /// <summary>
@@ -53,6 +56,9 @@ void initVM(VM* vm)
 	initValueArray(&vm->stack);
 	initTable(&vm->strings);
 	initTable(&vm->globals);
+
+	// init native functions
+	defineNativeFunction("clock", clockNative);
 }
 
 /// <summary>
@@ -83,6 +89,16 @@ static void runtimeError(const char* format, ...)
 
 	// reset state
 	resetStack();
+}
+
+static void defineNativeFunction(const char* name, NativeFn function)
+{
+	// push and pop to account for GC occurring due to allocations
+	push(OBJECT_VAL(copyString(name, (uint32_t)strlen(name))));
+	push(OBJECT_VAL(newNativeFunction(function)));
+	tableSet(&vm.globals, AS_STRING(vm.stack.values[0]), vm.stack.values[1]);
+	pop();
+	pop();
 }
 
 void push(Value value)
@@ -135,6 +151,15 @@ bool callValue(Value callee, uint8_t argCount)
 		{
 			case OBJECT_FUNCTION:
 				return call(AS_FUNCTION(callee), argCount);
+			case OBJECT_NATIVE:
+			{
+				NativeFn native = AS_NATIVE(callee);
+				Value* argv = &vm.stack.values[vm.stack.count - argCount];
+				Value result = native(argCount, argv);
+				vm.stack.count -= argCount + 1; // deallocate args off stack
+				push(result); // return value
+				return true;
+			}
 			default: break; // error
 		}
 	}
@@ -214,7 +239,7 @@ static InterpretResult run()
 
 		// decode instruction
 		// consider �direct threaded code�, �jump table�, and �computed goto�.
-		uint8_t operation = READ_BYTE();
+		OpCode operation = READ_BYTE();
 		switch (operation)
 		{
 		// constants
@@ -420,9 +445,13 @@ static InterpretResult run()
 			// return statement
 			push(result); // set return value
 			frame = &vm.callStack[vm.frameCount - 1]; // restore previous base pointer
+			break;
 		}
 		default:
+		{
+			runtimeError("Opcode not accounted for!");
 			return INTERPRET_RUNTIME_ERROR;
+		}
 		}
 	}
 

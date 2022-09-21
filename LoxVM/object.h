@@ -10,10 +10,12 @@
 // type querries
 #define IS_FUNCTION(value)		isObjectType(value, OBJECT_FUNCTION)
 #define IS_INSTANCE(value)		isObjectType(value, OBJECT_INSTANCE)
+#define IS_NATIVE(value)		isObjectType(value, OBJECT_NATIVE);
 #define IS_STRING(value)		isObjectType(value, OBJECT_STRING)
 
 // type casts
 #define AS_FUNCTION(value)		((ObjectFunction*)AS_OBJECT(value))
+#define AS_NATIVE(value)		(((ObjectNative*)AS_OBJECT(value))->function)
 #define AS_STRING(value)		((ObjectString*)AS_OBJECT(value))
 #define AS_CSTRING(value)		(((ObjectString*)AS_OBJECT(value))->chars)
 
@@ -21,6 +23,7 @@ typedef enum
 {
 	OBJECT_FUNCTION,
 	OBJECT_INSTANCE,
+	OBJECT_NATIVE,
 	OBJECT_STRING,
 } ObjectType;
 
@@ -41,6 +44,15 @@ struct ObjectFunction
 	ObjectString* name;
 };
 
+typedef Value(*NativeFn)(uint8_t argCount, Value* args);
+
+struct ObjectNative
+{
+	Object object; // header
+	// consider const char* name;
+	NativeFn function;
+};
+
 /// <summary>
 /// Underlying string type in Lox.
 /// Essentially a 'string' that is always dynamically allocated.
@@ -59,6 +71,7 @@ struct ObjectString // challenge: flag as dynamic or static and account as such 
 /// </summary>
 /// <returns>New instance of a function.</returns>
 ObjectFunction* newFunction();
+ObjectNative* newNativeFunction(NativeFn function);
 ObjectString* copyString(const char* chars, uint32_t length);
 void printObject(Value value);
 ObjectString* takeString(const char* chars, uint32_t length);

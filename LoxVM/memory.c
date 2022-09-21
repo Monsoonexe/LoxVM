@@ -29,6 +29,11 @@ static void freeObject(Object* object)
 			FREE(ObjectString, object); // free 'substruct'
 			break;
 		}
+		case OBJECT_NATIVE:
+		{
+			FREE(ObjectNative, object);
+			break;
+		}
 	}
 }
 

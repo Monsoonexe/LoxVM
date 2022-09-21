@@ -4,3 +4,4 @@ fun sayHello()
     var b = " world!";
     print a + b;
 }
+sayHello();
