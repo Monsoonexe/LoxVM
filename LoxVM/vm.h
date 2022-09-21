@@ -25,6 +25,8 @@ typedef struct
 
 typedef struct
 {
+	int64_t exitCode;
+
 	CallFrame callStack[FRAMES_MAX];
 	uint32_t frameCount;
 

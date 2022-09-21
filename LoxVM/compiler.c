@@ -254,6 +254,10 @@ static void emitLoop(uint32_t loopStart)
 
 	emitBytes(((offset >> 8) & 0xff), (offset & 0xff));
 }
+
+/// <summary>
+/// Emits nil and return.
+/// </summary>
 static void emitReturn()
 {
 	emitByte(OP_NIL);
@@ -562,6 +566,22 @@ static void compileForStatement()
 	endScope();
 }
 
+static void compileReturnStatement()
+{
+	// just return;
+	if (match(TOKEN_SEMICOLON))
+	{
+		// implicitly return 'nil'
+		emitReturn();
+	}
+	else // return a value;
+	{
+		compileExpression(); // compile returned value
+		consume(TOKEN_SEMICOLON, "Expected ';' after return value.");
+		emitByte(OP_RETURN);
+	}
+}
+
 static void compileStatement()
 {
 	if (match(TOKEN_PRINT))
@@ -575,6 +595,10 @@ static void compileStatement()
 	else if (match(TOKEN_FOR))
 	{
 		compileForStatement();
+	}
+	else if (match(TOKEN_RETURN))
+	{
+		compileReturnStatement();
 	}
 	else if (match(TOKEN_WHILE))
 	{

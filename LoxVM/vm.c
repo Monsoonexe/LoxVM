@@ -48,6 +48,7 @@ void freeVM(VM* vm)
 
 void initVM(VM* vm)
 {
+	vm->exitCode = -1; // interrupted
 	vm->objects = NULL;
 	initValueArray(&vm->stack);
 	initTable(&vm->strings);
@@ -390,6 +391,27 @@ static InterpretResult run()
 			if (count == 0)
 			{
 				pop(); // pop main()
+				if (IS_BOOL(result))
+				{
+					// 'true' indicates 'success' and 'false' indicates 'failure'.
+					vm.exitCode = AS_BOOL(result) ? 0 : -1;
+				}
+				else if (IS_NUMBER(result))
+				{
+					// assumes cast will work
+					vm.exitCode = (uint64_t)AS_NUMBER(result);
+				}
+				else if (IS_NIL(result))
+				{
+					// normal exit (possibly an early-exit)
+					vm.exitCode = 0;
+				}
+				// TODO - return a string through stdout?
+				else
+				{
+					runtimeError("Can only return number, nil, or bool.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
 				return INTERPRET_OK; // exit
 			}
 

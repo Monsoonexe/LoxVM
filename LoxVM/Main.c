@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "chunk.h"
 #include "debug.h"
 #include "vm.h"
@@ -12,7 +13,7 @@ void printIntro()
 	printf("Hello and welcome to the Lox Interpreter!\n\n");
 }
 
-static void repl()
+static uint64_t repl()
 {
 	char line[1024];
 	while (true)
@@ -31,6 +32,7 @@ static void repl()
 
 		interpret(line);
 	}
+	return vm.exitCode;
 }
 
 static char* readFile(const char* path)
@@ -74,14 +76,15 @@ static char* readFile(const char* path)
 	return buffer;
 }
 
-static void runFile(const char* path)
+static uint64_t runFile(const char* path)
 {
 	char* source = readFile(path);
 	result = interpret(source);
 	free(source);
+	return vm.exitCode;
 }
 
-int32_t getErrorCode(InterpretResult result)
+int32_t getErrorCode(InterpretResult result, uint64_t userExitCode)
 {
 	if (result == INTERPRET_COMPILE_ERROR)
 		return 65;
@@ -90,7 +93,7 @@ int32_t getErrorCode(InterpretResult result)
 		return 70;
 	
 	else
-		return 0;
+		return userExitCode;
 }
 
 void writeTonsOfConstants(Chunk* chunk)
@@ -103,6 +106,7 @@ void writeTonsOfConstants(Chunk* chunk)
 
 int32_t main(int argc, char* argv[])
 {
+	uint64_t userExitCode;
 	printIntro();
 
 	initVM(&vm);
@@ -110,11 +114,11 @@ int32_t main(int argc, char* argv[])
 
 	if (argc == 1)
 	{
-		repl(&vm);
+		userExitCode = repl(&vm);
 	}
 	else if (argc == 2)
 	{
-		runFile(argv[1]);
+		userExitCode = runFile(argv[1]);
 	}
 	else
 	{
@@ -125,5 +129,5 @@ int32_t main(int argc, char* argv[])
 	// teardown
 	freeVM(&vm);
 
-	return getErrorCode(result);
+	return getErrorCode(result, userExitCode);
 }
