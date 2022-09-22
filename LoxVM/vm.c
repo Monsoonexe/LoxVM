@@ -245,233 +245,233 @@ static InterpretResult run()
 		OpCode operation = READ_BYTE();
 		switch (operation)
 		{
-		// constants
-		case OP_CONSTANT: push(READ_CONSTANT()); break;
-		case OP_CONSTANT_LONG: push(READ_CONSTANT_LONG()); break;// function works, macro doesn't
+			// constants
+			case OP_CONSTANT: push(READ_CONSTANT()); break;
+			case OP_CONSTANT_LONG: push(READ_CONSTANT_LONG()); break;// function works, macro doesn't
 
-		// literals
-		case OP_ZERO: push(NUMBER_VAL(0)); break;
-		case OP_ONE: push(NUMBER_VAL(1)); break;
-		case OP_NEG_ONE: push(NUMBER_VAL(-1)); break;
-		case OP_NIL: push(NIL_VAL); break;
-		case OP_TRUE: push(BOOL_VAL(true)); break;
-		case OP_FALSE: push(BOOL_VAL(false)); break;
-		case OP_POP: pop(); break; // discard 
-		case OP_POPN: vm.stack.count -= READ_BYTE(); break;
+			// literals
+			case OP_ZERO: push(NUMBER_VAL(0)); break;
+			case OP_ONE: push(NUMBER_VAL(1)); break;
+			case OP_NEG_ONE: push(NUMBER_VAL(-1)); break;
+			case OP_NIL: push(NIL_VAL); break;
+			case OP_TRUE: push(BOOL_VAL(true)); break;
+			case OP_FALSE: push(BOOL_VAL(false)); break;
+			case OP_POP: pop(); break; // discard 
+			case OP_POPN: vm.stack.count -= READ_BYTE(); break;
 
-		// variable accessors
-		case OP_GET_LOCAL:
-		{
-			uint8_t slot = READ_BYTE();
-			push(frame->slots[slot]);
-			break;
-		}
-		case OP_SET_LOCAL:
-		{
-			// leave val on stack to support 'a = b = c = 10;'
-			uint8_t slot = READ_BYTE();
-			frame->slots[slot] = peek(0);
-			break;
-		}
-		case OP_GET_GLOBAL:
-		{
-			ObjectString* name = READ_STRING();
-			Value value;
-			if (!tableGet(&vm.globals, name, &value))
+			// variable accessors
+			case OP_GET_LOCAL:
 			{
-				runtimeError("Undefined variable '%s'.", name->chars);
-				return INTERPRET_RUNTIME_ERROR;
+				uint8_t slot = READ_BYTE();
+				push(frame->slots[slot]);
+				break;
 			}
-			push(value);
-			break;
-		}
-		case OP_SET_GLOBAL:
-		{
-			ObjectString* name = READ_STRING();
-
-			// undefined?
-			if (tableSet(&vm.globals, name, peek(0)))
+			case OP_SET_LOCAL:
 			{
-				tableDelete(&vm.globals, name); // undo mistake
-				runtimeError("Undefined variable '%s'.", name->chars);
-				return INTERPRET_RUNTIME_ERROR;
+				// leave val on stack to support 'a = b = c = 10;'
+				uint8_t slot = READ_BYTE();
+				frame->slots[slot] = peek(0);
+				break;
 			}
-			break;
-		}
-		case OP_DEFINE_GLOBAL: // consider LONG constants
-		{
-			ObjectString* name = READ_STRING();
-			tableSet(&vm.globals, name, peek(0)); // can easily redefine globals
-			pop(); // discard after to be considerate of GC
-			break;
-		}
-
-		// boolean
-		case OP_NOT: push(BOOL_VAL(isFalsey(pop()))); break;
-		case OP_EQUAL:
-		{
-			Value b = pop();
-			Value a = pop();
-			push(BOOL_VAL(valuesEqual(a, b)));
-			break;
-		}
-		case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
-		case OP_LESS: BINARY_OP(BOOL_VAL, < ); break;
-
-		// arithmetic
-		case OP_ADD: // BINARY_OP(NUMBER_VAL, +); break;
-		{
-			if (IS_STRING(peek(0)) && IS_STRING(peek(1)))
+			case OP_GET_GLOBAL:
 			{
-				concatenate();
-			}
-			else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1)))
-			{
-				double b = AS_NUMBER(pop());
-				double a = AS_NUMBER(pop());
-				push(NUMBER_VAL(a + b));
-			}
-			else
-			{
-				runtimeError("Operands must be two numbers or two strings.");
-				return INTERPRET_RUNTIME_ERROR;
-			}
-			break;
-		}
-		case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
-		case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
-		case OP_DIVIDE: // BINARY_OP(NUMBER_VAL, /); break;
-		{
-			if (!IS_NUMBER(peek(0)))
-			{
-				runtimeError("Right-hand operand must be a number.");
-				return INTERPRET_RUNTIME_ERROR;
-			}
-			else if (!IS_NUMBER(peek(1)))
-			{
-				runtimeError("Left-hand operand must be a number.");
-				return INTERPRET_RUNTIME_ERROR;
-			}
-
-			double b = AS_NUMBER(pop());
-			if (b == 0) // div 0
-			{
-				runtimeError("Divide by zero.");
-				return INTERPRET_RUNTIME_ERROR;
-			}
-			double a = AS_NUMBER(pop());
-			double quotient = a / b;
-			push(NUMBER_VAL(quotient));
-			break;
-		}
-		case OP_NEGATE:
-		{
-			// type check
-			if (!IS_NUMBER(peek(0)))
-			{
-				runtimeError("Operand must be a number.");
-				return INTERPRET_RUNTIME_ERROR;
-			}
-
-			uint32_t top = vm.stack.count - 1;
-			vm.stack.values[top] = NUMBER_VAL(-AS_NUMBER(vm.stack.values[top])); // challenge: avoid push/pop for unary op
-			break;
-		}
-		case OP_JUMP_IF_FALSE:
-		{
-			uint16_t offset = READ_16(); // always consume args
-			if (isFalsey(peek(0)))
-				frame->ip += offset;
-			break;
-		}
-		case OP_JUMP:
-		{
-			uint16_t offset = READ_16();
-			frame->ip += offset;
-			break;
-		}
-		case OP_LOOP:
-		{
-			uint16_t offset = READ_16();
-			frame->ip -= offset;
-			break;
-		}
-		case OP_CALL:
-		{
-			uint8_t argCount = READ_BYTE();
-			if (!callValue(peek(argCount), argCount))
-				return INTERPRET_RUNTIME_ERROR;
-			frame = &vm.callStack[vm.frameCount - 1]; // set base pointer
-			break;
-		}
-		case OP_CLOSURE:
-		{
-			ObjectFunction* function = AS_FUNCTION(READ_CONSTANT());
-			ObjectClosure* closure = newClosure(function);
-			push(OBJECT_VAL(closure));
-			break;
-		}
-		case OP_CLOSURE_LONG:
-		{
-			ObjectFunction* function = AS_FUNCTION(READ_CONSTANT_LONG());
-			ObjectClosure* closure = newClosure(function);
-			push(OBJECT_VAL(closure));
-			break;
-		}
-		case OP_PRINT:
-		{
-			printValue(pop());
-			printf("\n");
-			break;
-		}
-		case OP_RETURN:
-		{
-			Value result = pop(); // the return value
-			uint32_t count = --vm.frameCount; // pop callstack
-
-			// is program complete
-			if (count == 0)
-			{
-				pop(); // pop main()
-				if (IS_BOOL(result))
+				ObjectString* name = READ_STRING();
+				Value value;
+				if (!tableGet(&vm.globals, name, &value))
 				{
-					// 'true' indicates 'success' and 'false' indicates 'failure'.
-					vm.exitCode = AS_BOOL(result) ? 0 : -1;
-				}
-				else if (IS_NUMBER(result))
-				{
-					// assumes cast will work
-					vm.exitCode = (uint64_t)AS_NUMBER(result);
-				}
-				else if (IS_NIL(result))
-				{
-					// normal exit (possibly an early-exit)
-					vm.exitCode = 0;
-				}
-				// TODO - return a string through stdout?
-				else
-				{
-					runtimeError("Can only return number, nil, or bool.");
+					runtimeError("Undefined variable '%s'.", name->chars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
-				return INTERPRET_OK; // exit
+				push(value);
+				break;
+			}
+			case OP_SET_GLOBAL:
+			{
+				ObjectString* name = READ_STRING();
+
+				// undefined?
+				if (tableSet(&vm.globals, name, peek(0)))
+				{
+					tableDelete(&vm.globals, name); // undo mistake
+					runtimeError("Undefined variable '%s'.", name->chars);
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				break;
+			}
+			case OP_DEFINE_GLOBAL: // consider LONG constants
+			{
+				ObjectString* name = READ_STRING();
+				tableSet(&vm.globals, name, peek(0)); // can easily redefine globals
+				pop(); // discard after to be considerate of GC
+				break;
 			}
 
-			// deallocate locals, args, function name
-			//uint32_t locals = (&vm.stack.values[vm.stack.count] - frame->slots);
-			vm.stack.count -= frame->stackOffset;
-			//vm.stack.count -= locals;
+			// boolean
+			case OP_NOT: push(BOOL_VAL(isFalsey(pop()))); break;
+			case OP_EQUAL:
+			{
+				Value b = pop();
+				Value a = pop();
+				push(BOOL_VAL(valuesEqual(a, b)));
+				break;
+			}
+			case OP_GREATER: BINARY_OP(BOOL_VAL, >); break;
+			case OP_LESS: BINARY_OP(BOOL_VAL, < ); break;
 
-			// return statement
-			push(result); // set return value
-			frame = &vm.callStack[count - 1]; // restore previous base pointer
-			break;
-		}
-		default:
-		{
-			runtimeError("Opcode not accounted for!");
-			return INTERPRET_RUNTIME_ERROR;
-		}
+			// arithmetic
+			case OP_ADD: // BINARY_OP(NUMBER_VAL, +); break;
+			{
+				if (IS_STRING(peek(0)) && IS_STRING(peek(1)))
+				{
+					concatenate();
+				}
+				else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1)))
+				{
+					double b = AS_NUMBER(pop());
+					double a = AS_NUMBER(pop());
+					push(NUMBER_VAL(a + b));
+				}
+				else
+				{
+					runtimeError("Operands must be two numbers or two strings.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				break;
+			}
+			case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
+			case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
+			case OP_DIVIDE: // BINARY_OP(NUMBER_VAL, /); break;
+			{
+				if (!IS_NUMBER(peek(0)))
+				{
+					runtimeError("Right-hand operand must be a number.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				else if (!IS_NUMBER(peek(1)))
+				{
+					runtimeError("Left-hand operand must be a number.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				double b = AS_NUMBER(pop());
+				if (b == 0) // div 0
+				{
+					runtimeError("Divide by zero.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+				double a = AS_NUMBER(pop());
+				double quotient = a / b;
+				push(NUMBER_VAL(quotient));
+				break;
+			}
+			case OP_NEGATE:
+			{
+				// type check
+				if (!IS_NUMBER(peek(0)))
+				{
+					runtimeError("Operand must be a number.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				uint32_t top = vm.stack.count - 1;
+				vm.stack.values[top] = NUMBER_VAL(-AS_NUMBER(vm.stack.values[top])); // challenge: avoid push/pop for unary op
+				break;
+			}
+			case OP_JUMP_IF_FALSE:
+			{
+				uint16_t offset = READ_16(); // always consume args
+				if (isFalsey(peek(0)))
+					frame->ip += offset;
+				break;
+			}
+			case OP_JUMP:
+			{
+				uint16_t offset = READ_16();
+				frame->ip += offset;
+				break;
+			}
+			case OP_LOOP:
+			{
+				uint16_t offset = READ_16();
+				frame->ip -= offset;
+				break;
+			}
+			case OP_CALL:
+			{
+				uint8_t argCount = READ_BYTE();
+				if (!callValue(peek(argCount), argCount))
+					return INTERPRET_RUNTIME_ERROR;
+				frame = &vm.callStack[vm.frameCount - 1]; // set base pointer
+				break;
+			}
+			case OP_CLOSURE:
+			{
+				ObjectFunction* function = AS_FUNCTION(READ_CONSTANT());
+				ObjectClosure* closure = newClosure(function);
+				push(OBJECT_VAL(closure));
+				break;
+			}
+			case OP_CLOSURE_LONG:
+			{
+				ObjectFunction* function = AS_FUNCTION(READ_CONSTANT_LONG());
+				ObjectClosure* closure = newClosure(function);
+				push(OBJECT_VAL(closure));
+				break;
+			}
+			case OP_PRINT:
+			{
+				printValue(pop());
+				printf("\n");
+				break;
+			}
+			case OP_RETURN:
+			{
+				Value result = pop(); // the return value
+				uint32_t count = --vm.frameCount; // pop callstack
+
+				// is program complete
+				if (count == 0)
+				{
+					pop(); // pop main()
+					if (IS_BOOL(result))
+					{
+						// 'true' indicates 'success' and 'false' indicates 'failure'.
+						vm.exitCode = AS_BOOL(result) ? 0 : -1;
+					}
+					else if (IS_NUMBER(result))
+					{
+						// assumes cast will work
+						vm.exitCode = (uint64_t)AS_NUMBER(result);
+					}
+					else if (IS_NIL(result))
+					{
+						// normal exit (possibly an early-exit)
+						vm.exitCode = 0;
+					}
+					// TODO - return a string through stdout?
+					else
+					{
+						runtimeError("Can only return number, nil, or bool.");
+						return INTERPRET_RUNTIME_ERROR;
+					}
+					return INTERPRET_OK; // exit
+				}
+
+				// deallocate locals, args, function name
+				//uint32_t locals = (&vm.stack.values[vm.stack.count] - frame->slots);
+				vm.stack.count -= frame->stackOffset;
+				//vm.stack.count -= locals;
+
+				// return statement
+				push(result); // set return value
+				frame = &vm.callStack[count - 1]; // restore previous base pointer
+				break;
+			}
+			default:
+			{
+				runtimeError("Opcode not accounted for!");
+				return INTERPRET_RUNTIME_ERROR;
+			}
 		}
 	}
 
