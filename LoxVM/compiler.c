@@ -688,6 +688,13 @@ static void compileFunction(FunctionType type)
 	// create object
 	ObjectFunction* function = endCompiler();
 	emitClosure(function);
+
+	// emit upvalues
+	for (uint8_t i = 0; i < function->upvalueCount; ++i)
+	{
+		emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+		emitByte(compiler.upvalues[i].index);
+	}
 }
 
 static void compileFunDeclaration()
@@ -748,16 +755,21 @@ static void compileString(bool canAssign)
 static void compileNamedVariable(Token name, bool canAssign)
 {
 	uint8_t getOp, setOp; // bytecode to be emitted
-	uint32_t arg = resolveLocal(current, &name);
+	int32_t arg; // index
 
-	// local or global resolution
-	if (arg == -1)
+	// which scope is the variable located?
+	if ((arg = resolveLocal(current, &name)) != -1) // local
 	{
 		arg = parseIdentifierConstant(&name);
 		getOp = OP_GET_GLOBAL;
 		setOp = OP_SET_GLOBAL;
 	}
-	else
+	else if ((arg == resolveUpvalue(current, &name)) != -1) // enclosed
+	{
+		getOp = OP_GET_UPVALUE;
+		setOp = OP_SET_UPVALUE;
+	}
+	else // global
 	{
 		getOp = OP_GET_LOCAL;
 		setOp = OP_SET_LOCAL;
@@ -910,8 +922,52 @@ static int32_t resolveLocal(Compiler* compiler, Token* name)
 		}
 	}
 
-	// not found in locals -- global
-	return -1;
+	return -1; // not found in locals. try another scope
+}
+
+static int32_t addUpvalue(Compiler* compiler, uint8_t index,
+	bool isLocal)
+{
+	uint32_t upvalueCount = compiler->function->upvalueCount;
+
+	// check if already enclosed
+	for (uint32_t i = 0; i < upvalueCount; ++i)
+	{
+		Upvalue* upvalue = &compiler->upvalues[i];
+		if (upvalue->index == index && upvalue->isLocal == isLocal)
+			return i; // already enclosed
+	}
+
+	// guard against too many upvalues
+	if (upvalueCount == UINT8_COUNT)
+	{
+		error("Too many closure variables in function.");
+		return 0;
+	}
+
+	// create new upvalue
+	compiler->upvalues[upvalueCount].isLocal = isLocal;
+	compiler->upvalues[upvalueCount].index = index;
+	return compiler->function->upvalueCount++;
+}
+
+static int32_t resolveUpvalue(Compiler* compiler, Token* name)
+{
+	// quick exit if at top level
+	if (compiler->enclosing == NULL)
+		return -1; // must be global (or undefined)
+
+	// resolve local to this function
+	int32_t local = resolveLocal(compiler->enclosing, name);
+	if (local > -1)
+		return addUpvalue(compiler, (uint8_t)local, true);
+
+	// resolve local to outer functions
+	int32_t upvalue = resolveUpvalue(compiler->enclosing, name);
+	if (upvalue != -1)
+		return addUpvalue(compiler, (uint8_t)upvalue, false);
+
+	return -1; //
 }
 
 static void declareVariable()

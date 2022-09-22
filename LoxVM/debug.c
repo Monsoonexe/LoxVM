@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "debug.h"
+#include "object.h"
 #include "value.h"
 
 static uint32_t byteInstruction(const char* name,
@@ -112,20 +113,27 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 		case OP_FALSE:
 			return simpleInstruction("OP_FALSE", offset);
 
+		// stack operations
 		case OP_POP:
 			return simpleInstruction("OP_POP", offset);
 		case OP_POPN:
 			return byteInstruction("OP_POPN", chunk, offset);
+
+		// variable getters/setters
 		case OP_GET_LOCAL:
 			return byteInstruction("OP_GET_LOCAL", chunk, offset);
 		case OP_SET_LOCAL:
 			return byteInstruction("OP_SET_LOCAL", chunk, offset);
+		case OP_DEFINE_GLOBAL:
+			return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
 		case OP_GET_GLOBAL:
 			return constantInstruction("OP_GET_GLOBAL", chunk, offset);
 		case OP_SET_GLOBAL:
 			return constantInstruction("OP_SET_GLOBAL", chunk, offset);
-		case OP_DEFINE_GLOBAL:
-			return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
+		case OP_GET_UPVALUE:
+			return byteInstruction("OP_GET_UPVALUE", chunk, offset);
+		case OP_SET_UPVALUE:
+			return byteInstruction("OP_GET_UPVALUE", chunk, offset);
 
 		// boolean
 		case OP_EQUAL: 
@@ -169,6 +177,18 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 			printf("%-16s %4d ", "OP_CLOSURE", constant);
 			printValue(chunk->constants.values[constant]);
 			printf("\n");
+
+			// print enclosed variables
+			ObjectFunction* function = AS_FUNCTION(
+				chunk->constants.values[constant]);
+			for (uint8_t j = 0; j < function->upvalueCount; ++j)
+			{
+				uint8_t isLocal = chunk->code[offset++];
+				uint8_t index = chunk->code[offset++];
+				printf("%04d	|			%s %d\n",
+					offset - 2, isLocal ? "local" : "upvalue", index);
+			}
+
 			return offset;
 		}
 		case OP_CLOSURE_LONG:

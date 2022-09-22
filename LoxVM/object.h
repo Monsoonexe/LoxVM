@@ -43,6 +43,7 @@ struct ObjectFunction
 {
 	Object object; // header
 	uint32_t arity;
+	uint32_t upvalueCount;
 	Chunk chunk;
 	ObjectString* name;
 };

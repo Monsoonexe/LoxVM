@@ -13,6 +13,19 @@ typedef struct
 	uint32_t depth;
 } Local;
 
+typedef struct
+{
+	/// <summary>
+	/// Index into upvalue array
+	/// </summary>
+	uint8_t index;
+
+	/// <summary>
+	/// If false, is upvalue.
+	/// </summary>
+	bool isLocal;
+} Upvalue;
+
 typedef enum
 {
 	TYPE_FUNCTION,
@@ -26,8 +39,9 @@ typedef struct
 	FunctionType type;
 
 	Local locals[UINT8_COUNT];
-	uint32_t scopeDepth;
 	int32_t localCount;
+	Upvalue upvalues[UINT8_COUNT];
+	uint32_t scopeDepth;
 } Compiler;
 
 ObjectFunction* compile(const char* source);

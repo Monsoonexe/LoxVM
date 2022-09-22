@@ -273,6 +273,13 @@ static InterpretResult run()
 				frame->slots[slot] = peek(0);
 				break;
 			}
+			case OP_DEFINE_GLOBAL: // consider LONG constants
+			{
+				ObjectString* name = READ_STRING();
+				tableSet(&vm.globals, name, peek(0)); // can easily redefine globals
+				pop(); // discard after to be considerate of GC
+				break;
+			}
 			case OP_GET_GLOBAL:
 			{
 				ObjectString* name = READ_STRING();
@@ -296,13 +303,6 @@ static InterpretResult run()
 					runtimeError("Undefined variable '%s'.", name->chars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
-				break;
-			}
-			case OP_DEFINE_GLOBAL: // consider LONG constants
-			{
-				ObjectString* name = READ_STRING();
-				tableSet(&vm.globals, name, peek(0)); // can easily redefine globals
-				pop(); // discard after to be considerate of GC
 				break;
 			}
 
