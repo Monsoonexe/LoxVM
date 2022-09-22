@@ -22,6 +22,12 @@ typedef struct
 	/// Frame pointer;
 	/// </summary>
 	Value* slots; // frame pointer locals and args?
+
+	/// <summary>
+	/// The stack pointer when the function is called, to be restored
+	/// when function exits to deallocate the stack.
+	/// </summary>
+	uint32_t stackOffset;
 } CallFrame;
 
 typedef struct
