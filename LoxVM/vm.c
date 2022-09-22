@@ -77,7 +77,7 @@ static void runtimeError(const char* format, ...)
 	for (int32_t i = vm.frameCount - 1; i >= 0; --i)
 	{
 		CallFrame* frame = &vm.callStack[vm.frameCount - 1];
-		ObjectFunction* function = frame->function;
+		ObjectFunction* function = frame->closure->function;
 		size_t instruction = frame->ip - function->chunk.code - 1; // prev instruction is culprit
 		uint32_t line = function->chunk.lines[instruction];
 		fprintf(stderr, "[line %d] in script\n", line);
@@ -117,8 +117,9 @@ static Value peek(uint32_t distance)
 	return vm.stack.values[top - distance];
 }
 
-bool call(ObjectFunction* function, uint8_t argCount)
+static bool call(ObjectClosure* closure, uint8_t argCount)
 {
+	ObjectFunction* function = closure->function; // fetch once
 	// validate number of arguments against parameters
 	if (argCount != function->arity)
 	{
@@ -136,7 +137,7 @@ bool call(ObjectFunction* function, uint8_t argCount)
 
 	// setup call frame
 	CallFrame* frame = &vm.callStack[vm.frameCount++];
-	frame->function = function;
+	frame->closure = closure;
 	frame->ip = function->chunk.code;
 	// slots are function name and parameters
 	frame->slots = &vm.stack.values[vm.stack.count - argCount - 1];
@@ -150,8 +151,7 @@ bool callValue(Value callee, uint8_t argCount)
 	{
 		switch (OBJECT_TYPE(callee))
 		{
-			case OBJECT_FUNCTION:
-				return call(AS_FUNCTION(callee), argCount);
+			case OBJECT_CLOSURE: return call(AS_CLOSURE(callee), argCount);
 			case OBJECT_NATIVE:
 			{
 				NativeFn native = AS_NATIVE(callee);
@@ -196,12 +196,14 @@ static InterpretResult run()
 	CallFrame* frame = &vm.callStack[vm.frameCount - 1];
 
 #define READ_BYTE() (*(frame->ip++))
-#define READ_SHORT() \
+#define READ_16() \
 	(frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
-#define READ_LONG() \
+#define READ_24() \
+	(frame->ip += 3, (uint32_t)((frame->ip[-3] << 16) | (frame->ip[-2] << 8) | frame->ip[-1]))
+#define READ_32() \
 	(frame->ip += 4, (uint32_t)((frame->ip[-4] << 24) | (frame->ip[-3] << 16) | (frame->ip[-2] << 8) | frame->ip[-1]))
-#define READ_CONSTANT() (frame->function->chunk.constants.values[READ_BYTE()])
-#define READ_CONSTANT_LONG() (frame->function->chunk.constants.values[READ_LONG()])
+#define READ_CONSTANT() (frame->closure->function->chunk.constants.values[READ_BYTE()])
+#define READ_CONSTANT_LONG() (frame->closure->function->chunk.constants.values[READ_24()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) do \
 { \
@@ -234,8 +236,8 @@ static InterpretResult run()
 			printf(" ]");
 		}
 
-		disassembleInstruction(&(frame->function->chunk),
-			(uint32_t)(frame->ip - frame->function->chunk.code)); //offset
+		disassembleInstruction(&(frame->closure->function->chunk),
+			(uint32_t)(frame->ip - frame->closure->function->chunk.code)); //offset
 #endif
 
 		// decode instruction
@@ -377,20 +379,20 @@ static InterpretResult run()
 		}
 		case OP_JUMP_IF_FALSE:
 		{
-			uint16_t offset = READ_SHORT(); // always consume args
+			uint16_t offset = READ_16(); // always consume args
 			if (isFalsey(peek(0)))
 				frame->ip += offset;
 			break;
 		}
 		case OP_JUMP:
 		{
-			uint16_t offset = READ_SHORT();
+			uint16_t offset = READ_16();
 			frame->ip += offset;
 			break;
 		}
 		case OP_LOOP:
 		{
-			uint16_t offset = READ_SHORT();
+			uint16_t offset = READ_16();
 			frame->ip -= offset;
 			break;
 		}
@@ -400,6 +402,20 @@ static InterpretResult run()
 			if (!callValue(peek(argCount), argCount))
 				return INTERPRET_RUNTIME_ERROR;
 			frame = &vm.callStack[vm.frameCount - 1]; // set base pointer
+			break;
+		}
+		case OP_CLOSURE:
+		{
+			ObjectFunction* function = AS_FUNCTION(READ_CONSTANT());
+			ObjectClosure* closure = newClosure(function);
+			push(OBJECT_VAL(closure));
+			break;
+		}
+		case OP_CLOSURE_LONG:
+		{
+			ObjectFunction* function = AS_FUNCTION(READ_CONSTANT_LONG());
+			ObjectClosure* closure = newClosure(function);
+			push(OBJECT_VAL(closure));
 			break;
 		}
 		case OP_PRINT:
@@ -475,8 +491,11 @@ InterpretResult interpret(const char* source)
 	// handle compilation error
 	if (function == NULL) return INTERPRET_COMPILE_ERROR;
 
-	push(OBJECT_VAL(function));
-	call(function, 0); // main()
+	push(OBJECT_VAL(function)); // push for GC
+	ObjectClosure* closure = newClosure(function);
+	pop();
+	push(OBJECT_VAL(closure));
+	call(closure, 0); // main()
 
 	return run();
 }

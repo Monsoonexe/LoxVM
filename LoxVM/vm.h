@@ -11,7 +11,10 @@
 
 typedef struct
 {
-	ObjectFunction* function;
+	/// <summary>
+	/// The function currently being called.
+	/// </summary>
+	ObjectClosure* closure;
 
 	/// <summary>
 	/// 
