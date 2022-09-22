@@ -234,6 +234,29 @@ static void emitConstant(Value value)
 		emitBytes(OP_CONSTANT, i);
 	}
 }
+static void emitClosure(ObjectFunction* function)
+{
+	uint32_t constantCount = currentChunk()->count;
+	if (constantCount > CONSTANTS_MAX)
+	{	// error
+		error("Too many constants in one chunk.");
+		return;
+	}
+
+	// emit constant
+	uint32_t i = addConstant(currentChunk(), OBJECT_VAL(function));
+	if (constantCount >= UINT8_MAX)
+	{	// long (24-bit) index
+		emitByte(OP_CLOSURE_LONG);
+		emitByte((uint8_t)(i >> 16)); // consider '& 0xff'
+		emitByte((uint8_t)(i >> 8));
+		emitByte((uint8_t)(i >> 0));
+	}
+	else
+	{	// short (8-bit) index
+		emitBytes(OP_CLOSURE, i);
+	}
+}
 static uint32_t emitJump(OpCode instruction)
 {
 	emitByte(instruction);
@@ -664,7 +687,7 @@ static void compileFunction(FunctionType type)
 
 	// create object
 	ObjectFunction* function = endCompiler();
-	emitConstant(OBJECT_VAL(function));
+	emitClosure(function);
 }
 
 static void compileFunDeclaration()

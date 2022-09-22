@@ -70,6 +70,13 @@ static void printFunction(ObjectFunction* function)
 		printf("<fn> %s>", function->name->chars);
 }
 
+ObjectClosure* newClosure(ObjectFunction* function)
+{
+	ObjectClosure* closure = ALLOCATE_OBJECT(ObjectClosure, OBJECT_CLOSURE);
+	closure->function = function;
+	return closure;
+}
+
 ObjectFunction* newFunction()
 {
 	ObjectFunction* function = ALLOCATE_OBJECT(ObjectFunction, OBJECT_FUNCTION);
@@ -108,6 +115,7 @@ void printObject(Value value)
 {
 	switch (OBJECT_TYPE(value))
 	{
+		case OBJECT_CLOSURE: printFunction(AS_CLOSURE(value)->function); break;
 		case OBJECT_FUNCTION: printFunction(AS_FUNCTION(value)); break;
 		case OBJECT_INSTANCE: printf("%d", OBJECT_TYPE(value)); break;
 		case OBJECT_STRING: printf("%s", AS_CSTRING(value)); break;

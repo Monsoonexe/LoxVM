@@ -5,6 +5,7 @@ typedef struct Object Object;
 typedef struct ObjectString ObjectString;
 typedef struct ObjectFunction ObjectFunction;
 typedef struct ObjectNative ObjectNative;
+typedef struct ObjectClosure ObjectClosure;
 
 typedef enum
 {

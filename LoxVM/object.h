@@ -8,12 +8,14 @@
 #define OBJECT_TYPE(value)		(AS_OBJECT(value)->type)
 
 // type querries
+#define IS_CLOSURE(value)		isObjectType(value,	OBJECT_CLOSURE)
 #define IS_FUNCTION(value)		isObjectType(value, OBJECT_FUNCTION)
 #define IS_INSTANCE(value)		isObjectType(value, OBJECT_INSTANCE)
-#define IS_NATIVE(value)		isObjectType(value, OBJECT_NATIVE);
+#define IS_NATIVE(value)		isObjectType(value, OBJECT_NATIVE)
 #define IS_STRING(value)		isObjectType(value, OBJECT_STRING)
 
 // type casts
+#define AS_CLOSURE(value)		((ObjectClosure*)AS_OBJECT(value))
 #define AS_FUNCTION(value)		((ObjectFunction*)AS_OBJECT(value))
 #define AS_NATIVE(value)		(((ObjectNative*)AS_OBJECT(value))->function)
 #define AS_STRING(value)		((ObjectString*)AS_OBJECT(value))
@@ -21,6 +23,7 @@
 
 typedef enum
 {
+	OBJECT_CLOSURE,
 	OBJECT_FUNCTION,
 	OBJECT_INSTANCE,
 	OBJECT_NATIVE,
@@ -65,6 +68,17 @@ struct ObjectString // challenge: flag as dynamic or static and account as such 
 	const char* chars;
 	uint32_t hash;
 };
+
+struct ObjectClosure
+{
+	Object object;
+	ObjectFunction* function;
+};
+
+/// <summary>
+/// Constructor for a new ObjectClosure.
+/// </summary>
+ObjectClosure* newClosure(ObjectFunction* function);
 
 /// <summary>
 /// Like a default constructor.

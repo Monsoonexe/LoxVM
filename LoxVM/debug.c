@@ -159,8 +159,33 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 		case OP_LOOP:
 			return jumpInstruction("OP_LOOP", -1, chunk, offset);
 
+		// functions
 		case OP_CALL:
 			return byteInstruction("OP_CALL", chunk, offset);
+		case OP_CLOSURE:
+		{
+			offset++;
+			uint8_t constant = chunk->code[offset++];
+			printf("%-16s %4d ", "OP_CLOSURE", constant);
+			printValue(chunk->constants.values[constant]);
+			printf("\n");
+			return offset;
+		}
+		case OP_CLOSURE_LONG:
+		{
+			offset++;
+			uint8_t* code = chunk->code; // fetch once
+			uint8_t hi = code[offset + 1];
+			uint8_t mid = code[offset + 2];
+			uint8_t low = code[offset + 3];
+
+			// combine
+			uint32_t constantIndex = (hi << 16) | (mid << 8) | (low << 0);
+			printf("%-16s %4d ", "OP_CLOSURE_LONG", constantIndex);
+			printValue(chunk->constants.values[constantIndex]);
+			printf("\n");
+			return offset + 4;
+		}
 		case OP_RETURN:
 			return simpleInstruction("OP_RETURN", offset);
 		default:

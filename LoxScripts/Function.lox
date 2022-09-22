@@ -8,3 +8,5 @@ fun sayHello()
 
 sayHello();
 print a;
+
+return -1;

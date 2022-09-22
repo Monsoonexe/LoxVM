@@ -69,6 +69,9 @@ typedef enum
 	/// </summary>
 	OP_CALL,
 
+	OP_CLOSURE,
+	OP_CLOSURE_LONG,
+
 	OP_PRINT,
 	OP_RETURN,
 } OpCode;
