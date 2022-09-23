@@ -141,7 +141,7 @@ static bool call(ObjectClosure* closure, uint8_t argCount)
 	frame->ip = function->chunk.code;
 	// slots are function name and parameters
 	frame->slots = &vm.stack.values[vm.stack.count - argCount - 1];
-	frame->stackOffset = vm.stack.count + 1; // account for function on stack
+	frame->stackOffset = vm.stack.count - 2; // account for function and return value
 	return true;
 }
 
@@ -459,7 +459,7 @@ static InterpretResult run()
 
 				// deallocate locals, args, function name
 				//uint32_t locals = (&vm.stack.values[vm.stack.count] - frame->slots);
-				vm.stack.count -= frame->stackOffset;
+				vm.stack.count -= vm.stack.count - frame->stackOffset;
 				//vm.stack.count -= locals;
 
 				// return statement

@@ -22,6 +22,7 @@ void printValue(Value value)
 		// g: Print a double in either normal or exponential notation, whichever is more appropriate for its magnitude.
 		case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
 		case VAL_OBJECT: printObject(value); break;
+		default: exit(123); // unreachable;
 	}
 }
 
