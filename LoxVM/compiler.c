@@ -41,11 +41,60 @@ typedef void (*ParseFn)(bool canAssign); // 'declaration reflects use'
 
 typedef struct
 {
+	/// <summary>
+	/// Lookup key.
+	/// </summary>
+	Token name;
+
+	/// <summary>
+	/// Depth of scope.
+	/// </summary>
+	uint32_t depth;
+
+	/// <summary>
+	/// Flag if is being captured by a closure.
+	/// </summary>
+	bool isCaptured;
+} Local;
+
+typedef struct
+{
+	/// <summary>
+	/// Index into upvalue array
+	/// </summary>
+	uint8_t index;
+
+	/// <summary>
+	/// If false, is upvalue.
+	/// </summary>
+	bool isLocal;
+} Upvalue;
+
+typedef struct
+{
 	ParseFn prefix;
 	ParseFn infix;
 	Precedence precedence;
 
 } ParseRule;
+
+typedef enum
+{
+	TYPE_FUNCTION,
+	TYPE_SCRIPT,
+} FunctionType;
+
+typedef struct Compiler
+{
+	struct Compiler* enclosing;
+	ObjectFunction* function;
+	FunctionType type;
+
+	Local locals[UINT8_COUNT];
+	int32_t localCount;
+	Upvalue upvalues[UINT8_COUNT];
+	uint32_t scopeDepth;
+} Compiler;
 
 Parser parser;
 Compiler* current = NULL;
@@ -57,12 +106,12 @@ static void parsePrecedence(Precedence precedence);
 static void compileStatement();
 static void compileDeclaration();
 static uint32_t parseVariable(const char* errorMessage);
+static bool identifiersEqual(Token* a, Token* b);
 static void defineVariable(uint32_t global);
 static uint32_t parseIdentifierConstant(Token* name);
-static int32_t resolveLocal(Compiler* compiler, Token* name);
 static void compileVarDeclaration();
 
-void initCompiler(Compiler* compiler, FunctionType type)
+static void initCompiler(Compiler* compiler, FunctionType type)
 {
 	compiler->enclosing = current; // push compiler
 	compiler->function = NULL;
@@ -84,6 +133,7 @@ void initCompiler(Compiler* compiler, FunctionType type)
 	// claim a temp variable at local[0]
 	Local* local = &current->locals[current->localCount++];
 	local->depth = 0;
+	local->isCaptured = false;
 	local->name.start = "";
 	local->name.length = 0;
 }
@@ -316,19 +366,30 @@ static void endScope()
 	while (current->localCount > 0
 		&& current->locals[current->localCount - 1].depth > current->scopeDepth)
 	{
-		++count;
+		if (current->locals[current->localCount - 1].isCaptured)
+		{
+			// pop locals in runs
+			if (count == 1)
+				emitByte(OP_POP);
+			else if (count > 1)
+				emitBytes(OP_POPN, count);
+			count = 0; // reset counter
+
+			emitByte(OP_CLOSE_UPVALUE);
+		}
+		else
+		{
+			++count;
+		}
+
 		--current->localCount;
 	}
 
-	// pop locals off stack to deallocate
+	// pop locals off stack to deallocate that are left over
 	if (count == 1)
-	{
 		emitByte(OP_POP);
-	}
 	else if (count > 1)
-	{
 		emitBytes(OP_POPN, count);
-	}
 }
 
 static void synchronize()
@@ -752,6 +813,78 @@ static void compileString(bool canAssign)
 	emitConstant(OBJECT_VAL(copyString(start, end)));
 }
 
+static int32_t addUpvalue(Compiler* compiler, uint8_t index,
+	bool isLocal)
+{
+	uint32_t upvalueCount = compiler->function->upvalueCount;
+
+	// check if already enclosed
+	for (uint32_t i = 0; i < upvalueCount; ++i)
+	{
+		Upvalue* upvalue = &compiler->upvalues[i];
+		if (upvalue->index == index && upvalue->isLocal == isLocal)
+			return i; // already enclosed
+	}
+
+	// guard against too many upvalues
+	if (upvalueCount == UINT8_COUNT)
+	{
+		error("Too many closure variables in function.");
+		return 0;
+	}
+
+	// create new upvalue
+	compiler->upvalues[upvalueCount].isLocal = isLocal;
+	compiler->upvalues[upvalueCount].index = index;
+	return compiler->function->upvalueCount++;
+}
+
+/// <summary>
+/// the locals array in the compiler has the exact same layout as the VM's 
+/// stack will have at runtime.
+/// </summary>
+/// <returns>Index of local variable on stack.</returns>
+static int32_t resolveLocal(Compiler* compiler, Token* name)
+{
+	// walk backwards to get inner-most scope first
+	for (int32_t i = compiler->localCount - 1; i >= 0; --i)
+	{
+		Local* local = &compiler->locals[i];
+		if (identifiersEqual(name, &local->name))
+		{
+			// ensure fully defined
+			if (local->depth == -1)
+				error("Can't read local variable in its own initializer.");
+
+			return i;
+		}
+	}
+
+	return -1; // not found in locals. try another scope
+}
+
+static int32_t resolveUpvalue(Compiler* compiler, Token* name)
+{
+	// quick exit if at top level
+	if (compiler->enclosing == NULL)
+		return -1; // must be global (or undefined)
+
+	// resolve local to this function
+	int32_t local = resolveLocal(compiler->enclosing, name);
+	if (local > -1)
+	{
+		compiler->enclosing->locals[local].isCaptured = true; // capture
+		return addUpvalue(compiler, (uint8_t)local, true);
+	}
+
+	// resolve local to outer functions
+	int32_t upvalue = resolveUpvalue(compiler->enclosing, name);
+	if (upvalue > -1)
+		return addUpvalue(compiler, (uint8_t)upvalue, false);
+
+	return -1; //
+}
+
 static void compileNamedVariable(Token name, bool canAssign)
 {
 	uint8_t getOp, setOp; // bytecode to be emitted
@@ -760,19 +893,19 @@ static void compileNamedVariable(Token name, bool canAssign)
 	// which scope is the variable located?
 	if ((arg = resolveLocal(current, &name)) != -1) // local
 	{
-		arg = parseIdentifierConstant(&name);
-		getOp = OP_GET_GLOBAL;
-		setOp = OP_SET_GLOBAL;
+		getOp = OP_GET_LOCAL;
+		setOp = OP_SET_LOCAL;
 	}
-	else if ((arg == resolveUpvalue(current, &name)) != -1) // enclosed
+	else if ((arg = resolveUpvalue(current, &name)) != -1) // enclosed
 	{
 		getOp = OP_GET_UPVALUE;
 		setOp = OP_SET_UPVALUE;
 	}
 	else // global
 	{
-		getOp = OP_GET_LOCAL;
-		setOp = OP_SET_LOCAL;
+		arg = parseIdentifierConstant(&name);
+		getOp = OP_GET_GLOBAL;
+		setOp = OP_SET_GLOBAL;
 	}
 
 	// getter or setter?
@@ -893,81 +1026,14 @@ static void addLocal(Token name)
 	Local* local = &current->locals[current->localCount++];
 	local->name = name; // original source lexeme
 	local->depth = -1; // flag as uninit'd
+	local->isCaptured = false;
+
 }
 
 static bool identifiersEqual(Token* a, Token* b)
 {
 	uint32_t length = a->length; // fetch once
 	return (length == b->length) && memcmp(a->start, b->start, length) == 0;
-}
-
-/// <summary>
-/// the locals array in the compiler has the exact same layout as the VM's 
-/// stack will have at runtime.
-/// </summary>
-/// <returns>Index of local variable on stack.</returns>
-static int32_t resolveLocal(Compiler* compiler, Token* name)
-{
-	// walk backwards to get inner-most scope first
-	for (int32_t i = compiler->localCount - 1; i >= 0; --i)
-	{
-		Local* local = &compiler->locals[i];
-		if (identifiersEqual(name, &local->name))
-		{
-			// ensure fully defined
-			if (local->depth == -1)
-				error("Can't read local variable in its own initializer.");
-
-			return i;
-		}
-	}
-
-	return -1; // not found in locals. try another scope
-}
-
-static int32_t addUpvalue(Compiler* compiler, uint8_t index,
-	bool isLocal)
-{
-	uint32_t upvalueCount = compiler->function->upvalueCount;
-
-	// check if already enclosed
-	for (uint32_t i = 0; i < upvalueCount; ++i)
-	{
-		Upvalue* upvalue = &compiler->upvalues[i];
-		if (upvalue->index == index && upvalue->isLocal == isLocal)
-			return i; // already enclosed
-	}
-
-	// guard against too many upvalues
-	if (upvalueCount == UINT8_COUNT)
-	{
-		error("Too many closure variables in function.");
-		return 0;
-	}
-
-	// create new upvalue
-	compiler->upvalues[upvalueCount].isLocal = isLocal;
-	compiler->upvalues[upvalueCount].index = index;
-	return compiler->function->upvalueCount++;
-}
-
-static int32_t resolveUpvalue(Compiler* compiler, Token* name)
-{
-	// quick exit if at top level
-	if (compiler->enclosing == NULL)
-		return -1; // must be global (or undefined)
-
-	// resolve local to this function
-	int32_t local = resolveLocal(compiler->enclosing, name);
-	if (local > -1)
-		return addUpvalue(compiler, (uint8_t)local, true);
-
-	// resolve local to outer functions
-	int32_t upvalue = resolveUpvalue(compiler->enclosing, name);
-	if (upvalue != -1)
-		return addUpvalue(compiler, (uint8_t)upvalue, false);
-
-	return -1; //
 }
 
 static void declareVariable()

@@ -72,8 +72,20 @@ static void printFunction(ObjectFunction* function)
 
 ObjectClosure* newClosure(ObjectFunction* function)
 {
+	uint32_t upvalueCount = function->upvalueCount; // fetch once
+
+	// create upvalue pointers array
+	ObjectUpvalue** upvalues = ALLOCATE(ObjectUpvalue*, upvalueCount);
+
+	// init array of upvalue pointers
+	for (uint32_t i = 0; i < upvalueCount; ++i)
+		upvalues[i] = NULL;
+
+	// create closure
 	ObjectClosure* closure = ALLOCATE_OBJECT(ObjectClosure, OBJECT_CLOSURE);
 	closure->function = function;
+	closure->upvalues = upvalues;
+	closure->upvalueCount = upvalueCount;
 	return closure;
 }
 
@@ -92,6 +104,14 @@ ObjectNative* newNativeFunction(NativeFn function)
 	ObjectNative* native = ALLOCATE_OBJECT(ObjectNative, OBJECT_NATIVE); // new fn
 	native->function = function;
 	return native;
+}
+
+ObjectUpvalue* newUpvalue(Value* slot)
+{
+	ObjectUpvalue* upvalue = ALLOCATE_OBJECT(ObjectUpvalue, OBJECT_UPVALUE); // new upvalue
+	upvalue->location = slot;
+	upvalue->next = NULL;
+	return upvalue;
 }
 
 ObjectString* copyString(const char* chars, uint32_t length)
@@ -119,8 +139,9 @@ void printObject(Value value)
 		case OBJECT_CLOSURE: printFunction(AS_CLOSURE(value)->function); break;
 		case OBJECT_FUNCTION: printFunction(AS_FUNCTION(value)); break;
 		case OBJECT_INSTANCE: printf("%d", OBJECT_TYPE(value)); break;
-		case OBJECT_STRING: printf("%s", AS_CSTRING(value)); break;
 		case OBJECT_NATIVE: printf("<native fn>"); break;
+		case OBJECT_STRING: printf("%s", AS_CSTRING(value)); break;
+		case OBJECT_UPVALUE: printf("upvalue");
 		default: exit(123); // unreachable
 	}
 }

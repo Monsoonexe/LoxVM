@@ -13,6 +13,7 @@
 #define IS_INSTANCE(value)		isObjectType(value, OBJECT_INSTANCE)
 #define IS_NATIVE(value)		isObjectType(value, OBJECT_NATIVE)
 #define IS_STRING(value)		isObjectType(value, OBJECT_STRING)
+#define IS_UPVALUE(value)		isObjectType(value, OBJECT_UPVALUE)
 
 // type casts
 #define AS_CLOSURE(value)		((ObjectClosure*)AS_OBJECT(value))
@@ -28,6 +29,7 @@ typedef enum
 	OBJECT_INSTANCE,
 	OBJECT_NATIVE,
 	OBJECT_STRING,
+	OBJECT_UPVALUE,
 } ObjectType;
 
 /// <summary>
@@ -70,10 +72,19 @@ struct ObjectString // challenge: flag as dynamic or static and account as such 
 	uint32_t hash;
 };
 
+struct ObjectUpvalue
+{
+	Object object;
+	Value* location;
+	struct ObjectUpvalue* next; // linked-list node
+};
+
 struct ObjectClosure
 {
 	Object object;
 	ObjectFunction* function;
+	ObjectUpvalue** upvalues;
+	uint32_t upvalueCount;
 };
 
 /// <summary>
@@ -84,9 +95,20 @@ ObjectClosure* newClosure(ObjectFunction* function);
 /// <summary>
 /// Like a default constructor.
 /// </summary>
-/// <returns>New instance of a function.</returns>
 ObjectFunction* newFunction();
+
+/// <summary>
+/// Constructor for a native function.
+/// </summary>
+/// <param name="function"></param>
 ObjectNative* newNativeFunction(NativeFn function);
+
+/// <summary>
+/// Constructor for an upvalue.
+/// </summary>
+/// <returns></returns>
+ObjectUpvalue* newUpvalue(Value* slot);
+
 ObjectString* copyString(const char* chars, uint32_t length);
 void printObject(Value value);
 ObjectString* takeString(const char* chars, uint32_t length);

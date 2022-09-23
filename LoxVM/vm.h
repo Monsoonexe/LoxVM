@@ -57,6 +57,11 @@ typedef struct
 	Table strings;
 
 	/// <summary>
+	/// Linked-list of upvalues that are still on the stack.
+	/// </summary>
+	ObjectUpvalue* openUpvalues;
+
+	/// <summary>
 	/// Root of dynamically-allocated objects linked-list.
 	/// </summary>
 	Object* objects;

@@ -6,6 +6,7 @@ typedef struct ObjectString ObjectString;
 typedef struct ObjectFunction ObjectFunction;
 typedef struct ObjectNative ObjectNative;
 typedef struct ObjectClosure ObjectClosure;
+typedef struct ObjectUpvalue ObjectUpvalue;
 
 typedef enum
 {

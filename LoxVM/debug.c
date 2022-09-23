@@ -206,6 +206,8 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 			printf("\n");
 			return offset + 4;
 		}
+		case OP_CLOSE_UPVALUE: return simpleInstruction("OP_CLOSE_UPVALUE", offset);
+
 		case OP_RETURN:
 			return simpleInstruction("OP_RETURN", offset);
 		default:

@@ -74,6 +74,11 @@ typedef enum
 	OP_CLOSURE,
 	OP_CLOSURE_LONG,
 
+	/// <summary>
+	/// Take variable from stack and put it on heap.
+	/// </summary>
+	OP_CLOSE_UPVALUE,
+
 	OP_PRINT,
 	OP_RETURN,
 } OpCode;

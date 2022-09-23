@@ -5,12 +5,21 @@
 #include "value.h"
 #include "vm.h"
 
+/// <summary>
+/// Destructor.
+/// </summary>
 static void freeObject(Object* object)
 {
 	switch (object->type)
 	{
 		case OBJECT_CLOSURE:
 		{
+			// free array of upvalues
+			ObjectClosure* closure = (ObjectClosure*)object;
+			FREE_ARRAY(ObjectUpvalue*, closure->upvalues,
+				closure->upvalueCount);
+
+			// free self
 			FREE(ObjectClosure, object);
 			break;
 		}
@@ -39,6 +48,12 @@ static void freeObject(Object* object)
 			FREE(ObjectNative, object);
 			break;
 		}
+		case OBJECT_UPVALUE:
+		{
+			FREE(ObjectUpvalue, object);
+			break;
+		}
+		default: exit(123); // unreachable
 	}
 }
 

@@ -23,6 +23,7 @@ static void resetStack()
 {
 	vm.stack.count = 0;
 	vm.frameCount = 0;
+	vm.openUpvalues = NULL;
 	// no need to actually de-allocate anything
 }
 
@@ -168,6 +169,16 @@ bool callValue(Value callee, uint8_t argCount)
 	return false;
 }
 
+static ObjectUpvalue* captureUpvalue(Value* local)
+{
+	// new
+	ObjectUpvalue* createdUpvalue = newUpvalue(local); // return value
+
+	// init
+
+	return createdUpvalue;
+}
+
 static bool isFalsey(Value value)
 {
 	return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
@@ -231,8 +242,9 @@ static InterpretResult run()
 		//for (Value* slot = vm->stack.values; slot < vm->stack.count; slot++)
 		for (uint32_t i = 0; i < vm.stack.count; ++i)
 		{
+			Value value = vm.stack.values[i];
 			printf("[ ");
-			printValue(vm.stack.values[i]);
+			printValue(value);
 			printf(" ]");
 		}
 
@@ -303,6 +315,19 @@ static InterpretResult run()
 					runtimeError("Undefined variable '%s'.", name->chars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
+				break;
+			}
+			case OP_GET_UPVALUE:
+			{
+				uint8_t slot = READ_BYTE();
+				push(*frame->closure->upvalues[slot]->location);
+				break;
+			}
+			case OP_SET_UPVALUE:
+			{
+				// don't pop because assignment is an expression
+				uint8_t slot = READ_BYTE();
+				*frame->closure->upvalues[slot]->location = peek(0);
 				break;
 			}
 
@@ -409,6 +434,17 @@ static InterpretResult run()
 				ObjectFunction* function = AS_FUNCTION(READ_CONSTANT());
 				ObjectClosure* closure = newClosure(function);
 				push(OBJECT_VAL(closure));
+
+				// handle upvalues
+				for (uint32_t i = 0; i < closure->upvalueCount; ++i)
+				{
+					uint8_t isLocal = READ_BYTE();
+					uint8_t index = READ_BYTE();
+					if (isLocal)
+						closure->upvalues[i] = captureUpvalue(frame->slots + index);
+					else // is already captured
+						closure->upvalues[i] = frame->closure->upvalues[index];
+				}
 				break;
 			}
 			case OP_CLOSURE_LONG:
