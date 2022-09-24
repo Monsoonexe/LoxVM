@@ -452,6 +452,17 @@ static InterpretResult run()
 				ObjectFunction* function = AS_FUNCTION(READ_CONSTANT_LONG());
 				ObjectClosure* closure = newClosure(function);
 				push(OBJECT_VAL(closure));
+
+				// handle upvalues
+				for (uint32_t i = 0; i < closure->upvalueCount; ++i)
+				{
+					uint8_t isLocal = READ_BYTE();
+					uint8_t index = READ_BYTE();
+					if (isLocal)
+						closure->upvalues[i] = captureUpvalue(frame->slots + index);
+					else // is already captured
+						closure->upvalues[i] = frame->closure->upvalues[index];
+				}
 				break;
 			}
 			case OP_PRINT:
@@ -468,7 +479,6 @@ static InterpretResult run()
 				// is program complete
 				if (count == 0)
 				{
-					pop(); // pop main()
 					if (IS_BOOL(result))
 					{
 						// 'true' indicates 'success' and 'false' indicates 'failure'.

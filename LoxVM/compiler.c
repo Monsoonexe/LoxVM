@@ -827,7 +827,7 @@ static int32_t addUpvalue(Compiler* compiler, uint8_t index,
 	}
 
 	// guard against too many upvalues
-	if (upvalueCount == UINT8_COUNT)
+	if (upvalueCount >= UINT8_COUNT)
 	{
 		error("Too many closure variables in function.");
 		return 0;
@@ -882,7 +882,7 @@ static int32_t resolveUpvalue(Compiler* compiler, Token* name)
 	if (upvalue > -1)
 		return addUpvalue(compiler, (uint8_t)upvalue, false);
 
-	return -1; //
+	return -1; // flag not found. check global?
 }
 
 static void compileNamedVariable(Token name, bool canAssign)
@@ -891,12 +891,12 @@ static void compileNamedVariable(Token name, bool canAssign)
 	int32_t arg; // index
 
 	// which scope is the variable located?
-	if ((arg = resolveLocal(current, &name)) != -1) // local
+	if ((arg = resolveLocal(current, &name)) > -1) // local
 	{
 		getOp = OP_GET_LOCAL;
 		setOp = OP_SET_LOCAL;
 	}
-	else if ((arg = resolveUpvalue(current, &name)) != -1) // enclosed
+	else if ((arg = resolveUpvalue(current, &name)) > -1) // enclosed
 	{
 		getOp = OP_GET_UPVALUE;
 		setOp = OP_SET_UPVALUE;
