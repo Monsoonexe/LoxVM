@@ -112,6 +112,11 @@ Value pop()
 	return vm.stack.values[--vm.stack.count];
 }
 
+inline Value* stackTop()
+{
+	return &vm.stack.values[vm.stack.count - 1];
+}
+
 static Value peek(uint32_t distance)
 {
 	uint32_t top = vm.stack.count - 1;
@@ -505,7 +510,7 @@ static InterpretResult run()
 			}
 			case OP_CLOSE_UPVALUE:
 			{
-				closeUpvalues(vm.stack.count - 1);
+				closeUpvalues(stackTop());
 				pop();
 				break;
 			}

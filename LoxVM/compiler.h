@@ -8,3 +8,4 @@
 #define MAX_NESTED_CALLS UINT16_MAX
 
 ObjectFunction* compile(const char* source);
+void markCompilerRoots();

@@ -1,15 +1,27 @@
 #include <stdlib.h>
 
+#include "compiler.h"
 #include "object.h"
 #include "memory.h"
 #include "value.h"
 #include "vm.h"
+
+#ifdef DEBUG_LOG_GC
+#include <stdio.h>
+#include "debug.h"
+#endif
+
+static void markRoots();
 
 /// <summary>
 /// Destructor.
 /// </summary>
 static void freeObject(Object* object)
 {
+#ifdef DEBUG_LOG_GC
+	printf("%p free type %d\n", (void*)object, object->type);
+#endif
+
 	switch (object->type)
 	{
 		case OBJECT_CLOSURE:
@@ -57,6 +69,19 @@ static void freeObject(Object* object)
 	}
 }
 
+void collectGarbage()
+{
+#ifdef DEBUG_LOG_GC
+	printf("-- gc begin\n");
+#endif
+
+	markRoots();
+
+#ifdef DEBUG_LOG_GC
+	printf("-- gc end\n");
+#endif
+}
+
 void freeObjects(Object* objects)
 {
 	while (objects != NULL)
@@ -67,8 +92,55 @@ void freeObjects(Object* objects)
 	}
 }
 
+void markObject(Object* object)
+{
+	if (object == NULL)
+		return;
+
+	// print object being marked
+#ifdef DEBUG_LOG_GC
+	printf("%p mark ", (void*)object);
+	printValue(OBJECT_VAL(object));
+	printf("\n");
+#endif
+
+	object->isMarked = true;
+}
+
+void markValue(Value value)
+{
+	if (IS_OBJECT(value))
+		markObject(AS_OBJECT(value));
+}
+
+static void markRoots()
+{
+	// mark stack array
+	for (Value* slot = vm.stack.values; slot < stackTop(); ++slot)
+		markValue(*slot);
+
+	// mark call stack array
+	for (int32_t i = 0; i < vm.frameCount; ++i)
+		markObject((Object*)vm.callStack[i].closure);
+
+	// mark upvalues linked list
+	for (ObjectUpvalue* upvalue = vm.openUpvalues;
+		upvalue != NULL; upvalue = upvalue->next)
+		markObject((Object*)upvalue);
+
+	markTable(&vm.globals);
+	markCompilerRoots();
+}
+
 void* reallocate(void* pointer, size_t oldSize, size_t newSize)
 {
+#ifdef DEBUG_STRESS_GC
+	if (newSize > oldSize)
+	{
+		collectGarbage();
+	}
+#endif
+
 	// free memory
 	if (newSize == 0)
 	{

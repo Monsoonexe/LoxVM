@@ -16,7 +16,10 @@
 #define FREE_ARRAY(type, pointer, oldCount) \
 	reallocate(pointer, sizeof(type) * (oldCount), 0)
 
+void collectGarbage();
 void freeObjects(Object* objects);
+void markObject(Object* object);
+void markValue(Value value);
 
 /// <summary>
 /// allocate, free, shrink, or grow. Also keeps accounting of memory.

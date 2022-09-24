@@ -38,6 +38,11 @@ typedef enum
 struct Object
 {
 	ObjectType type;
+
+	/// <summary>
+	/// Marked as reachable by the garbage collector.
+	/// </summary>
+	bool isMarked;
 	struct Object* next; //linked list node
 };
 

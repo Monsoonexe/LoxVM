@@ -82,3 +82,4 @@ void initVM(VM* vm);
 InterpretResult interpret(const char* source);
 void push(Value value);
 Value pop();
+inline Value* stackTop();

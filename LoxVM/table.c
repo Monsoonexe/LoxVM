@@ -162,6 +162,16 @@ ObjectString* tableFindString(Table* table, const char* chars,
 	}
 }
 
+void markTable(Table* table)
+{
+	for (int32_t i = 0; i < table->capacity; ++i)
+	{
+		Entry* entry = &table->entries[i];
+		markObject((Object*)entry->key);
+		markValue(entry->value);
+	}
+}
+
 void freeTable(Table* table)
 {
 	FREE_ARRAY(Entry, table->entries, table->capacity);

@@ -36,6 +36,7 @@ bool tableSet(Table* table, ObjectString* key, Value value);
 void copyTable(Table* src, Table* dest);
 ObjectString* tableFindString(Table* table, const char* chars,
 	uint32_t length, uint32_t hash);
+void markTable(Table* table);
 void freeTable(Table* table);
 void initTable(Table* table);
 float loadFactor(Table* table);

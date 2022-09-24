@@ -19,10 +19,16 @@ static Object* allocateObject(size_t size, ObjectType type)
 {
 	Object* object = (Object*)reallocate(NULL, 0, size);
 	object->type = type;
+	object->isMarked = false;
 
-	// set head
+	// add to front of list
 	object->next = vm.objects;
-	vm.objects = object;
+	vm.objects = object; // set as head
+
+#ifdef DEBUG_LOG_GC
+	printf("%p allocate %zu for %d\n", (void*)object, size, type);
+#endif
+
 	return object;
 }
 
