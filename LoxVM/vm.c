@@ -171,12 +171,44 @@ bool callValue(Value callee, uint8_t argCount)
 
 static ObjectUpvalue* captureUpvalue(Value* local)
 {
-	// new
-	ObjectUpvalue* createdUpvalue = newUpvalue(local); // return value
+	ObjectUpvalue* prevUpvalue = NULL;
+	// start at upvalue closest to stack
+	ObjectUpvalue* upvalue = vm.openUpvalues; // return value
 
-	// init
+	// sorted linked-list traversal
+	while (upvalue != NULL && upvalue->location > local)
+	{
+		prevUpvalue = upvalue;
+		upvalue = upvalue->next;
+	}
 
-	return createdUpvalue;
+	// did we find it or should we make a new one?
+	if (upvalue != NULL && upvalue->location == local)
+		return upvalue; // re-use existing variable
+	
+	// create a new one
+	upvalue = newUpvalue(local);
+	upvalue->next = upvalue;
+
+	// add to linked-list
+	if (prevUpvalue == NULL) // no head (first)
+		vm.openUpvalues = upvalue; // head
+	else
+		prevUpvalue->next = upvalue; // tail
+
+	return upvalue;
+}
+
+static void closeUpvalues(Value* last)
+{
+	while (vm.openUpvalues != NULL
+		&& vm. openUpvalues->location >= last)
+	{
+		ObjectUpvalue* upvalue = vm.openUpvalues;
+		upvalue->closed = *upvalue->location; // move the value to heap
+		upvalue->location = &upvalue->closed; // point to location on heap
+		vm.openUpvalues = upvalue->next;
+	}
 }
 
 static bool isFalsey(Value value)
@@ -471,9 +503,16 @@ static InterpretResult run()
 				printf("\n");
 				break;
 			}
+			case OP_CLOSE_UPVALUE:
+			{
+				closeUpvalues(vm.stack.count - 1);
+				pop();
+				break;
+			}
 			case OP_RETURN:
 			{
 				Value result = pop(); // the return value
+				closeUpvalues(frame->slots); // close function's params and locals
 				uint32_t count = --vm.frameCount; // pop callstack
 
 				// is program complete

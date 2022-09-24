@@ -76,6 +76,11 @@ struct ObjectUpvalue
 {
 	Object object;
 	Value* location;
+
+	/// <summary>
+	/// Heap-allocated.
+	/// </summary>
+	Value closed;
 	struct ObjectUpvalue* next; // linked-list node
 };
 

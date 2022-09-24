@@ -1027,7 +1027,6 @@ static void addLocal(Token name)
 	local->name = name; // original source lexeme
 	local->depth = -1; // flag as uninit'd
 	local->isCaptured = false;
-
 }
 
 static bool identifiersEqual(Token* a, Token* b)
