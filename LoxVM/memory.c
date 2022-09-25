@@ -14,6 +14,7 @@
 static void blackenObject(Object* object);
 static void markArray(ValueArray* array);
 static void markRoots();
+static void sweep();
 static void traceReferences();
 
 /// <summary>
@@ -80,6 +81,7 @@ void collectGarbage()
 
 	markRoots();
 	traceReferences();
+	sweep();
 
 #ifdef DEBUG_LOG_GC
 	printf("-- gc end\n");
@@ -223,6 +225,38 @@ void* reallocate(void* pointer, size_t oldSize, size_t newSize)
 	return result;
 }
 
+static void sweep()
+{
+	Object* previous = NULL;
+	Object* object = vm.objects;
+
+	// traverse linked list
+	while (object != NULL)
+	{
+		// is node still reachable?
+		if (object->isMarked) // yes
+		{
+			object->isMarked = false; // clear flag
+			// skip. move to next node
+			previous = object;
+			object = object->next;
+		}
+		else // no
+		{
+			Object* unreached = object;
+
+			// linked-list removal
+			object = object->next;
+			if (previous != NULL)
+				previous->next = object; // re-link nodes
+			else
+				vm.objects = object; // set head
+
+			freeObject(unreached);
+		}
+	}
+}
+
 static void traceReferences()
 {
 	while (vm.grayCount > 0)
@@ -230,4 +264,6 @@ static void traceReferences()
 		Object* object = vm.grayStack[--vm.grayCount];
 		blackenObject(object);
 	}
+	// grey stack is empty
+	// every object is either black or white
 }
