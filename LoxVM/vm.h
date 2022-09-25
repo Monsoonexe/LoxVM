@@ -65,6 +65,10 @@ typedef struct
 	/// Root of dynamically-allocated objects linked-list.
 	/// </summary>
 	Object* objects;
+
+	uint32_t grayCount;
+	uint32_t grayCapacity;
+	Object** grayStack;
 } VM;
 
 typedef enum

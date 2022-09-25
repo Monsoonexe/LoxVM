@@ -54,6 +54,12 @@ void initVM(VM* vm)
 {
 	vm->exitCode = -1; // interrupted
 	vm->objects = NULL;
+
+	// init gray stack
+	vm->grayCount = 0;
+	vm->grayCapacity = 0;
+	vm->grayStack = NULL;
+
 	initValueArray(&vm->stack);
 	initTable(&vm->strings);
 	initTable(&vm->globals);
