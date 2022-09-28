@@ -203,16 +203,16 @@ static ObjectUpvalue* captureUpvalue(Value* local)
 		return upvalue; // re-use existing variable
 	
 	// create a new one
-	upvalue = newUpvalue(local);
-	upvalue->next = upvalue;
+	ObjectUpvalue* createdUpvalue = newUpvalue(local);
+	createdUpvalue->next = upvalue;
 
 	// add to linked-list
 	if (prevUpvalue == NULL) // no head (first)
-		vm.openUpvalues = upvalue; // head
+		vm.openUpvalues = createdUpvalue; // head
 	else
-		prevUpvalue->next = upvalue; // tail
+		prevUpvalue->next = createdUpvalue; // tail
 
-	return upvalue;
+	return createdUpvalue;
 }
 
 static void closeUpvalues(Value* last)
