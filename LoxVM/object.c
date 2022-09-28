@@ -143,7 +143,8 @@ ObjectString* copyString(const char* chars, uint32_t length)
 
 void printObject(Value value)
 {
-	switch (OBJECT_TYPE(value))
+	ObjectType type = OBJECT_TYPE(value);
+	switch (type)
 	{
 		case OBJECT_CLOSURE: printFunction(AS_CLOSURE(value)->function); break;
 		case OBJECT_FUNCTION: printFunction(AS_FUNCTION(value)); break;

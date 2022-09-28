@@ -115,9 +115,7 @@ static void blackenObject(Object* object)
 			ObjectClosure* closure = (ObjectClosure*)object;
 			markObject((Object*)closure->function);
 			for (uint32_t i = 0; i < closure->upvalueCount; ++i)
-			{
 				markObject((Object*)closure->upvalues[i]);
-			}
 			break;
 		}
 		case OBJECT_FUNCTION:
@@ -196,8 +194,6 @@ void markValue(Value value)
 
 static void markRoots()
 {
-	if (vm.stack.count == 0) return;
-
 	// mark stack array
 	for (Value* slot = vm.stack.values; slot < &vm.stack.values[vm.stack.count]; ++slot)
 		markValue(*slot);
@@ -218,15 +214,14 @@ static void markRoots()
 void* reallocate(void* pointer, size_t oldSize, size_t newSize)
 {
 	vm.bytesAllocated += newSize - oldSize;
-#ifdef DEBUG_STRESS_GC
 	if (newSize > oldSize)
 	{
+#ifdef DEBUG_STRESS_GC
 		collectGarbage();
-	}
 #endif
-
-	if (vm.bytesAllocated > vm.nextGC)
-		collectGarbage();
+		if (vm.bytesAllocated > vm.nextGC)
+			collectGarbage();
+	}
 
 	// free memory
 	if (newSize == 0)
