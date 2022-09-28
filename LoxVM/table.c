@@ -164,7 +164,7 @@ ObjectString* tableFindString(Table* table, const char* chars,
 
 void markTable(Table* table)
 {
-	for (int32_t i = 0; i < table->capacity; ++i)
+	for (uint32_t i = 0; i < table->capacity; ++i)
 	{
 		Entry* entry = &table->entries[i];
 		markObject((Object*)entry->key);
@@ -188,4 +188,15 @@ void initTable(Table* table)
 float loadFactor(Table* table)
 {
 	return table->count / (float)table->capacity;
+}
+
+void tableRemoveWhite(Table* table)
+{
+	for (uint32_t i = 0; i < table->capacity; ++i)
+	{
+		Entry* entry = &table->entries[i];
+		ObjectString* key = entry->key;
+		if (key != NULL && !key->object.isMarked)
+			tableDelete(table, key);
+	}
 }

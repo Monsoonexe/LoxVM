@@ -111,6 +111,7 @@ int64_t main(int argc, char* argv[])
 
 	initVM(&vm);
 	initStack(&vm);
+	initNativeFunctions();
 
 	if (argc == 1)
 	{

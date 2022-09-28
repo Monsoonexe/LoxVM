@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "chunk.h"
 #include "memory.h"
+#include "vm.h"
 
 uint32_t addConstant(Chunk* chunk, Value value)
 {
@@ -44,6 +45,7 @@ void writeChunk(Chunk* chunk, uint8_t byte, uint32_t line)
 
 uint32_t writeConstant(Chunk* chunk, Value value, uint32_t line)
 {
+	push(value); // preserve on stack for GC
 	uint32_t index = addConstant(chunk, value);
 
 	if (index <= UINT8_MAX) // single-byte locater
@@ -65,5 +67,6 @@ uint32_t writeConstant(Chunk* chunk, Value value, uint32_t line)
 		writeChunk(chunk, low, line);
 	}
 
+	pop();
 	return index;
 }

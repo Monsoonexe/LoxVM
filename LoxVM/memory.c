@@ -11,6 +11,8 @@
 #include "debug.h"
 #endif
 
+#define GC_HEAP_GROW_FACTOR 2
+
 static void blackenObject(Object* object);
 static void markArray(ValueArray* array);
 static void markRoots();
@@ -77,14 +79,24 @@ void collectGarbage()
 {
 #ifdef DEBUG_LOG_GC
 	printf("-- gc begin\n");
+	size_t before = vm.bytesAllocated;
 #endif
 
 	markRoots();
 	traceReferences();
+	tableRemoveWhite(&vm.strings); // sweep string table
 	sweep();
 
+	vm.nextGC = vm.bytesAllocated * GC_HEAP_GROW_FACTOR;
+
 #ifdef DEBUG_LOG_GC
+	size_t bytesCollected = before - vm.bytesAllocated;
 	printf("-- gc end\n");
+	if (bytesCollected > 0)
+	{
+		printf("	collected %zu bytes (from %zu to %zu) next at %zu\n",
+			bytesCollected, before, vm.bytesAllocated, vm.nextGC);
+	}
 #endif
 }
 
@@ -184,8 +196,10 @@ void markValue(Value value)
 
 static void markRoots()
 {
+	if (vm.stack.count == 0) return;
+
 	// mark stack array
-	for (Value* slot = vm.stack.values; slot < stackTop(); ++slot)
+	for (Value* slot = vm.stack.values; slot < &vm.stack.values[vm.stack.count]; ++slot)
 		markValue(*slot);
 
 	// mark call stack array
@@ -203,12 +217,16 @@ static void markRoots()
 
 void* reallocate(void* pointer, size_t oldSize, size_t newSize)
 {
+	vm.bytesAllocated += newSize - oldSize;
 #ifdef DEBUG_STRESS_GC
 	if (newSize > oldSize)
 	{
 		collectGarbage();
 	}
 #endif
+
+	if (vm.bytesAllocated > vm.nextGC)
+		collectGarbage();
 
 	// free memory
 	if (newSize == 0)

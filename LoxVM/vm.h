@@ -61,6 +61,9 @@ typedef struct
 	/// </summary>
 	ObjectUpvalue* openUpvalues;
 
+	size_t bytesAllocated;
+	size_t nextGC;
+
 	/// <summary>
 	/// Root of dynamically-allocated objects linked-list.
 	/// </summary>
@@ -81,6 +84,10 @@ typedef enum
 extern VM vm; // declare, and expose to the rest of the program
 
 void freeVM(VM* vm);
+/// <summary>
+/// Add all the native functions that the vm offers.
+/// </summary>
+void initNativeFunctions();
 void initStack(VM* vm);
 void initVM(VM* vm);
 InterpretResult interpret(const char* source);

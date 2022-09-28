@@ -50,10 +50,18 @@ void freeVM(VM* vm)
 	initVM(vm);
 }
 
+void initNativeFunctions()
+{
+	// init native functions
+	defineNativeFunction("clock", clockNative);
+}
+
 void initVM(VM* vm)
 {
 	vm->exitCode = -1; // interrupted
 	vm->objects = NULL;
+	vm->bytesAllocated = 0;
+	vm->nextGC = 1024 * 1024;
 
 	// init gray stack
 	vm->grayCount = 0;
@@ -63,9 +71,6 @@ void initVM(VM* vm)
 	initValueArray(&vm->stack);
 	initTable(&vm->strings);
 	initTable(&vm->globals);
-
-	// init native functions
-	defineNativeFunction("clock", clockNative);
 }
 
 /// <summary>
@@ -120,7 +125,7 @@ Value pop()
 
 inline Value* stackTop()
 {
-	return &vm.stack.values[vm.stack.count - 1];
+	return &vm.stack.values[vm.stack.count];
 }
 
 static Value peek(uint32_t distance)
@@ -232,8 +237,8 @@ static bool isFalsey(Value value)
 /// </summary>
 static void concatenate()
 {
-	ObjectString* b = AS_STRING(pop());
-	ObjectString* a = AS_STRING(pop());
+	ObjectString* b = AS_STRING(peek(0)); // keep on stack for gc
+	ObjectString* a = AS_STRING(peek(1));
 
 	uint32_t length = a->length + b->length;
 	char* chars = ALLOCATE(char, length + 1); // \0
@@ -242,6 +247,7 @@ static void concatenate()
 	chars[length] = '\0'; // null-terminated
 
 	ObjectString* result = takeString(chars, length);
+	pop(); pop();
 	push(OBJECT_VAL(result));
 }
 
@@ -516,7 +522,7 @@ static InterpretResult run()
 			}
 			case OP_CLOSE_UPVALUE:
 			{
-				closeUpvalues(stackTop());
+				closeUpvalues(&vm.stack.values[vm.stack.count - 1]);
 				pop();
 				break;
 			}

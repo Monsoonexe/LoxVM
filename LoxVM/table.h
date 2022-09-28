@@ -40,3 +40,4 @@ void markTable(Table* table);
 void freeTable(Table* table);
 void initTable(Table* table);
 float loadFactor(Table* table);
+void tableRemoveWhite(Table* table);

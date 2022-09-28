@@ -9,4 +9,4 @@ fun sayHello()
 sayHello();
 print a;
 
-return -1;
+return 256;

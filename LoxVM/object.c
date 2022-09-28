@@ -48,7 +48,9 @@ static ObjectString* allocateString(const char* chars,
 	string->hash = hash;
 
 	// intern
+	push(OBJECT_VAL(string)); // store where gc can reach it
 	tableSet(&vm.strings, string, NIL_VAL);
+	pop();
 
 	return string;
 }
