@@ -6,6 +6,33 @@
 #include "object.h"
 #include "value.h"
 
+typedef void (*PrintValueFn)(Value value);
+
+static void printBoolValue(Value value)
+{
+	printf(AS_BOOL(value) ? "true" : "false");
+}
+
+static void printNilValue(Value value)
+{
+	printf("nil");
+}
+
+static void printNumberValue(Value value)
+{
+	// g: Print a double in either normal or exponential notation, 
+	// whichever is more appropriate for its magnitude.
+	printf("%g", AS_NUMBER(value));
+}
+
+PrintValueFn printValueFunctions[] =
+{
+	[VAL_BOOL] = { printBoolValue },
+	[VAL_NIL] = { printNilValue },
+	[VAL_NUMBER] = { printNumberValue },
+	[VAL_OBJECT] = { printObject }
+};
+
 void initValueArray(ValueArray* array)
 {
 	array->values = NULL;
@@ -15,15 +42,10 @@ void initValueArray(ValueArray* array)
 
 void printValue(Value value)
 {
-	switch (value.type)
-	{
-		case VAL_BOOL: printf(AS_BOOL(value) ? "true" : "false");break;
-		case VAL_NIL: printf("nil"); break;
-		// g: Print a double in either normal or exponential notation, whichever is more appropriate for its magnitude.
-		case VAL_NUMBER: printf("%g", AS_NUMBER(value)); break;
-		case VAL_OBJECT: printObject(value); break;
-		default: exit(123); // unreachable;
-	}
+	// lookup table (instead of switch-case)
+	ValueType type = value.type;
+	PrintValueFn printer = printValueFunctions[type];
+	printer(value);
 }
 
 bool valuesEqual(Value a, Value b)
