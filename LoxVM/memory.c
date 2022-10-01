@@ -147,9 +147,7 @@ void freeObjects(Object* objects)
 static void markArray(ValueArray* array)
 {
 	for (uint32_t i = 0; i < array->count; ++i)
-	{
 		markValue(array->values[i]);
-	}
 }
 
 void markObject(Object* object)
@@ -172,7 +170,7 @@ void markObject(Object* object)
 	if (type == OBJECT_STRING || type == OBJECT_NATIVE)
 		return; //  A black object is any object whose isMarked field is set and that is no longer in the gray stack.
 	
-	//
+	// auto-expand
 	if (vm.grayCapacity < vm.grayCount + 1)
 	{
 		vm.grayCapacity = GROW_CAPACITY(vm.grayCapacity);
@@ -183,7 +181,10 @@ void markObject(Object* object)
 			exit(1);
 	}
 
-	vm.grayStack[vm.grayCount++] = object;
+	// strings and natives don't need to be processed, so skip graying them
+	Value value = OBJECT_VAL(object);
+	if (!(IS_NATIVE(value) || IS_STRING(value)))
+		vm.grayStack[vm.grayCount++] = object;
 }
 
 void markValue(Value value)
@@ -199,13 +200,15 @@ static void markRoots()
 		markValue(*slot);
 
 	// mark call stack array
-	for (int32_t i = 0; i < vm.frameCount; ++i)
+	for (uint32_t i = 0; i < vm.frameCount; ++i)
 		markObject((Object*)vm.callStack[i].closure);
 
 	// mark upvalues linked list
 	for (ObjectUpvalue* upvalue = vm.openUpvalues;
 		upvalue != NULL; upvalue = upvalue->next)
+	{
 		markObject((Object*)upvalue);
+	}
 
 	markTable(&vm.globals);
 	markCompilerRoots();
@@ -249,7 +252,7 @@ static void sweep()
 		// is node still reachable?
 		if (object->isMarked) // yes
 		{
-			object->isMarked = false; // clear flag
+			object->isMarked = false; // clear flag for next run
 			// skip. move to next node
 			previous = object;
 			object = object->next;
