@@ -1,0 +1,8 @@
+var iterations = 10000;
+var cat = "";
+
+while (iterations > 0)
+{
+    cat = cat + "a";
+    iterations = iterations - 1;
+}

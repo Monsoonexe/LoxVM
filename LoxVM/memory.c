@@ -30,6 +30,11 @@ static void freeObject(Object* object)
 
 	switch (object->type)
 	{
+		case OBJECT_CLASS:
+		{
+			FREE(ObjectClass, object);
+			break;
+		}
 		case OBJECT_CLOSURE:
 		{
 			// free array of upvalues
@@ -100,6 +105,9 @@ void collectGarbage()
 #endif
 }
 
+/// <summary>
+/// Mark each object's dependencies.
+/// </summary>
 static void blackenObject(Object* object)
 {
 #ifdef DEBUG_LOG_GC
@@ -110,6 +118,12 @@ static void blackenObject(Object* object)
 
 	switch (object->type)
 	{
+		case OBJECT_CLASS:
+		{
+			ObjectClass* _class = (ObjectClass*)object;
+			markObject((Object*)_class->name);
+			break;
+		}
 		case OBJECT_CLOSURE:
 		{
 			ObjectClosure* closure = (ObjectClosure*)object;

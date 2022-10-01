@@ -8,6 +8,7 @@
 #define OBJECT_TYPE(value)		(AS_OBJECT(value)->type)
 
 // type querries
+#define IS_CLASS(value)			isObjectType(value, OBJECT_CLASS)
 #define IS_CLOSURE(value)		isObjectType(value,	OBJECT_CLOSURE)
 #define IS_FUNCTION(value)		isObjectType(value, OBJECT_FUNCTION)
 #define IS_INSTANCE(value)		isObjectType(value, OBJECT_INSTANCE)
@@ -16,6 +17,7 @@
 #define IS_UPVALUE(value)		isObjectType(value, OBJECT_UPVALUE)
 
 // type casts
+#define AS_CLASS(value)			((ObjectClass*)AS_OBJECT(value))
 #define AS_CLOSURE(value)		((ObjectClosure*)AS_OBJECT(value))
 #define AS_FUNCTION(value)		((ObjectFunction*)AS_OBJECT(value))
 #define AS_NATIVE(value)		(((ObjectNative*)AS_OBJECT(value))->function)
@@ -24,6 +26,7 @@
 
 typedef enum
 {
+	OBJECT_CLASS,
 	OBJECT_CLOSURE,
 	OBJECT_FUNCTION,
 	OBJECT_INSTANCE,
@@ -96,6 +99,18 @@ struct ObjectClosure
 	ObjectUpvalue** upvalues;
 	uint32_t upvalueCount;
 };
+
+struct ObjectClass
+{
+	Object object;
+	ObjectString* name;
+};
+
+/// <summary>
+/// Constructor for new class.
+/// </summary>
+/// <param name="name"></param>
+ObjectClass* newClass(ObjectString* name);
 
 /// <summary>
 /// Constructor for a new ObjectClosure.

@@ -78,6 +78,13 @@ static void printFunction(ObjectFunction* function)
 		printf("<fn> %s>", function->name->chars);
 }
 
+ObjectClass* newClass(ObjectString* name)
+{
+	ObjectClass* _class = ALLOCATE_OBJECT(ObjectClass, OBJECT_CLASS);
+	_class->name = name;
+	return _class;
+}
+
 ObjectClosure* newClosure(ObjectFunction* function)
 {
 	uint32_t upvalueCount = function->upvalueCount; // fetch once
@@ -146,6 +153,7 @@ void printObject(Value value)
 	ObjectType type = OBJECT_TYPE(value);
 	switch (type)
 	{
+		case OBJECT_CLASS: printf("%s", AS_CLASS(value)->name->chars); break;
 		case OBJECT_CLOSURE: printFunction(AS_CLOSURE(value)->function); break;
 		case OBJECT_FUNCTION: printFunction(AS_FUNCTION(value)); break;
 		case OBJECT_INSTANCE: printf("%d", OBJECT_TYPE(value)); break;
