@@ -263,6 +263,17 @@ static void emitBytes(uint8_t byte1, uint8_t byte2)
 	emitByte(byte1);
 	emitByte(byte2);
 }
+/// <summary>
+/// Used when the constant table exceeds 256 elements and needs more digits in the
+/// opcode to address the table.
+/// </summary>
+static void emitBytesLong(uint8_t opcode, uint32_t index)
+{
+	emitByte(opcode);
+	emitByte((uint8_t)(index >> 16)); // consider '& 0xff'
+	emitByte((uint8_t)(index >> 8));
+	emitByte((uint8_t)(index >> 0));
+}
 static void emitConstant(Value value)
 {
 	uint32_t constantCount = currentChunk()->count;
@@ -274,12 +285,9 @@ static void emitConstant(Value value)
 
 	// emit constant
 	uint32_t i = addConstant(currentChunk(), value);
-	if (constantCount >= UINT8_MAX)
+	if (i >= UINT8_COUNT)
 	{	// long (24-bit) index
-		emitByte(OP_CONSTANT_LONG);
-		emitByte((uint8_t)(i >> 16)); // consider '& 0xff'
-		emitByte((uint8_t)(i >> 8));
-		emitByte((uint8_t)(i >> 0));
+		emitBytesLong(OP_CONSTANT_LONG, i);
 	}
 	else
 	{	// short (8-bit) index
@@ -297,12 +305,9 @@ static void emitClosure(ObjectFunction* function)
 
 	// emit constant
 	uint32_t i = addConstant(currentChunk(), OBJECT_VAL(function));
-	if (constantCount >= UINT8_MAX)
+	if (i >= UINT8_COUNT)
 	{	// long (24-bit) index
-		emitByte(OP_CLOSURE_LONG);
-		emitByte((uint8_t)(i >> 16)); // consider '& 0xff'
-		emitByte((uint8_t)(i >> 8));
-		emitByte((uint8_t)(i >> 0));
+		emitBytesLong(OP_CLOSURE_LONG, i);
 	}
 	else
 	{	// short (8-bit) index
@@ -863,7 +868,8 @@ static int32_t addUpvalue(Compiler* compiler, uint8_t index, bool isLocal)
 /// the locals array in the compiler has the exact same layout as the VM's 
 /// stack will have at runtime.
 /// </summary>
-/// <returns>Index of local variable on stack.</returns>
+/// <returns>Index of local variable on stack or a 
+/// negative number to indicate 'not found'.</returns>
 static int32_t resolveLocal(Compiler* compiler, Token* name)
 {
 	// walk backwards to get inner-most scope first
@@ -907,7 +913,7 @@ static int32_t resolveUpvalue(Compiler* compiler, Token* name)
 
 static void compileNamedVariable(Token name, bool canAssign)
 {
-	uint8_t getOp, setOp; // bytecode to be emitted
+	uint8_t getOp, setOp; // opcode to be emitted
 	int32_t arg; // index
 
 	// which scope is the variable located?
@@ -929,15 +935,22 @@ static void compileNamedVariable(Token name, bool canAssign)
 	}
 
 	// getter or setter?
+	uint8_t opCode; // the operation to actually perform
 	if (canAssign && match(TOKEN_EQUAL))
 	{
 		compileExpression();
-		emitBytes(setOp, (uint8_t)arg);
+		opCode = setOp;
 	}
 	else
 	{
-		emitBytes(getOp, (uint8_t)arg);
+		opCode = getOp;
 	}
+
+	// emit code
+	if (arg < UINT8_COUNT)
+		emitBytes(opCode, (uint8_t)arg);
+	else
+		emitBytesLong(opCode, (uint32_t)arg);
 }
 
 static void compileVariable(bool canAssign)
@@ -1077,6 +1090,9 @@ static void declareVariable()
 	addLocal(*name);
 }
 
+/// <summary>
+/// Adds an identifier to the constant table so it is available at runtime.
+/// </summary>
 static uint32_t parseIdentifierConstant(Token* name)
 {
 	// return a copy of the string as identifier
