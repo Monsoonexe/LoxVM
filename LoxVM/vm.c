@@ -168,6 +168,12 @@ bool callValue(Value callee, uint8_t argCount)
 	{
 		switch (OBJECT_TYPE(callee))
 		{
+			case OBJECT_CLASS: // class constructor
+			{
+				ObjectClass* _class = AS_CLASS(callee);
+				stackTop()[-argCount - 1] = OBJECT_VAL(newInstance(_class));
+				return true;
+			}
 			case OBJECT_CLOSURE: return call(AS_CLOSURE(callee), argCount);
 			case OBJECT_NATIVE:
 			{
