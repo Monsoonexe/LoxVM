@@ -102,6 +102,7 @@ Compiler* current = NULL;
 
 // prototypes
 static void compileExpression();
+static void declareVariable();
 static ParseRule* getRule(TokenType type);
 static void parsePrecedence(Precedence precedence);
 static void compileStatement();
@@ -768,12 +769,31 @@ static void compileFunDeclaration()
 	defineVariable(global); //put function in variable
 }
 
+static void compileClassDeclaration()
+{
+	// handle identifier
+	consume(TOKEN_IDENTIFIER, "Expected a class name.");
+	uint8_t nameConstant = parseIdentifierConstant(&parser.previous);
+	declareVariable();
+
+	// bytecode
+	emitBytes(OP_CLASS, nameConstant);
+	defineVariable(nameConstant);
+
+	// body
+	consume(TOKEN_LEFT_BRACE, "Expected '{' before class body.");
+	consume(TOKEN_RIGHT_BRACE, "Expected '}' after class body.");
+}
+
 static void compileDeclaration()
 {
+	// in order of commonality
 	if (match(TOKEN_VAR))
 		compileVarDeclaration();
 	else if (match(TOKEN_FUN))
 		compileFunDeclaration();
+	else if (match(TOKEN_CLASS))
+		compileClassDeclaration();
 	else
 		compileStatement();
 
@@ -814,8 +834,7 @@ static void compileString(bool canAssign)
 	emitConstant(OBJECT_VAL(copyString(start, end)));
 }
 
-static int32_t addUpvalue(Compiler* compiler, uint8_t index,
-	bool isLocal)
+static int32_t addUpvalue(Compiler* compiler, uint8_t index, bool isLocal)
 {
 	uint32_t upvalueCount = compiler->function->upvalueCount;
 
@@ -1080,7 +1099,6 @@ static uint32_t parseVariable(const char* errorMessage)
 	return parseIdentifierConstant(&parser.previous);
 }
 
-// TODO - support OP_DEFINE_GLOBAL_LONG
 static void defineVariable(uint32_t global)
 {
 	// don't define local variables
@@ -1090,6 +1108,7 @@ static void defineVariable(uint32_t global)
 		return;
 	}
 
+	// TODO - support OP_DEFINE_GLOBAL_LONG
 	emitBytes(OP_DEFINE_GLOBAL, global & 0xff);
 }
 

@@ -54,6 +54,13 @@ static void freeObject(Object* object)
 			// GC will handle the 'name' string
 			break;
 		}
+		case OBJECT_INSTANCE:
+		{
+			ObjectInstance* instance = (ObjectInstance*)object;
+			freeTable(&instance->fields); // GC cleans up individual items in table
+			FREE(ObjectInstance, object);
+			break;
+		}
 		case OBJECT_STRING:
 		{
 			ObjectString* string = (ObjectString*)object;
@@ -106,7 +113,7 @@ void collectGarbage()
 }
 
 /// <summary>
-/// Mark each object's dependencies.
+/// Mark each object's children.
 /// </summary>
 static void blackenObject(Object* object)
 {
@@ -139,9 +146,15 @@ static void blackenObject(Object* object)
 			markArray(&function->chunk.constants);
 			break;
 		}
-		case OBJECT_INSTANCE: exit(-1);
-		case OBJECT_NATIVE: break;
-		case OBJECT_STRING: break;
+		case OBJECT_INSTANCE:
+		{
+			ObjectInstance* instance = (ObjectInstance*)object;
+			markObject((Object*)instance->_class);
+			markTable(&instance->fields);
+			break;
+		}
+		case OBJECT_NATIVE: break; // goes straight to black
+		case OBJECT_STRING: break; // goes straight to black
 		case OBJECT_UPVALUE: markValue(((ObjectUpvalue*)object)->closed); break;
 		default: exit(123); // unreachable
 	}

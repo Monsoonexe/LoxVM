@@ -569,6 +569,9 @@ static InterpretResult run()
 				frame = &vm.callStack[count - 1]; // restore previous base pointer
 				break;
 			}
+			case OP_CLASS:
+				push(OBJECT_VAL(newClass(READ_STRING())));
+				break;
 			default:
 			{
 				runtimeError("Opcode not accounted for!");

@@ -2,6 +2,7 @@
 
 #include "chunk.h"
 #include "common.h"
+#include "table.h"
 #include "value.h"
 #include "vm.h"
 
@@ -20,6 +21,7 @@
 #define AS_CLASS(value)			((ObjectClass*)AS_OBJECT(value))
 #define AS_CLOSURE(value)		((ObjectClosure*)AS_OBJECT(value))
 #define AS_FUNCTION(value)		((ObjectFunction*)AS_OBJECT(value))
+#define AS_INSTANCE(value)		((ObjectInstance*)AS_OBJECT(value))
 #define AS_NATIVE(value)		(((ObjectNative*)AS_OBJECT(value))->function)
 #define AS_STRING(value)		((ObjectString*)AS_OBJECT(value))
 #define AS_CSTRING(value)		(((ObjectString*)AS_OBJECT(value))->chars)
@@ -106,6 +108,13 @@ struct ObjectClass
 	ObjectString* name;
 };
 
+struct ObjectInstance
+{
+	Object object;
+	ObjectClass* _class;
+	Table fields;
+};
+
 /// <summary>
 /// Constructor for new class.
 /// </summary>
@@ -121,6 +130,12 @@ ObjectClosure* newClosure(ObjectFunction* function);
 /// Like a default constructor.
 /// </summary>
 ObjectFunction* newFunction();
+
+/// <summary>
+/// Constructor for a new ObjectInstance.
+/// </summary>
+/// <returns></returns>
+ObjectInstance* newInstance(ObjectClass* _class);
 
 /// <summary>
 /// Constructor for a native function.

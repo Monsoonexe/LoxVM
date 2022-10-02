@@ -81,6 +81,10 @@ typedef enum
 
 	OP_PRINT,
 	OP_RETURN,
+
+	// classes
+	OP_CLASS,
+
 } OpCode;
 
 typedef struct

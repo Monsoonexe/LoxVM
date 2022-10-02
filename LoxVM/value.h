@@ -8,6 +8,7 @@ typedef struct ObjectNative ObjectNative;
 typedef struct ObjectClosure ObjectClosure;
 typedef struct ObjectUpvalue ObjectUpvalue;
 typedef struct ObjectClass ObjectClass;
+typedef struct ObjectInstance ObjectInstance;
 
 typedef enum
 {
