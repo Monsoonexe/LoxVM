@@ -134,6 +134,14 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 			return byteInstruction("OP_GET_UPVALUE", chunk, offset);
 		case OP_SET_UPVALUE:
 			return byteInstruction("OP_GET_UPVALUE", chunk, offset);
+		case OP_GET_PROPERTY:
+			return constantInstruction("OP_GET_PROPERTY", chunk, offset);
+		case OP_GET_PROPERTY_LONG:
+			return constantLongInstruction("OP_GET_PROPERTY_LONG", chunk, offset);
+		case OP_SET_PROPERTY:
+			return constantInstruction("OP_GET_PROPERTY", chunk, offset);
+		case OP_SET_PROPERTY_LONG:
+			return constantLongInstruction("OP_SET_PROPERTY_LONG", chunk, offset);
 
 		// boolean
 		case OP_EQUAL: 

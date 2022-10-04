@@ -1,2 +1,9 @@
 class Brioche {}
 print Brioche;
+print Brioche();
+
+var b = Brioche();
+print b;
+b.hello = "hello";
+b.world = " world!";
+print b.hello + b.world;

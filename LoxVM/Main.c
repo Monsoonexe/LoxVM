@@ -119,6 +119,7 @@ int64_t main(int argc, char* argv[])
 	}
 	else if (argc == 2)
 	{
+		printf("Running file <%s>\r\n\n", argv[1]);
 		userExitCode = runFile(argv[1]);
 	}
 	else

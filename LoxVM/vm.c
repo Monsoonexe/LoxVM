@@ -271,6 +271,7 @@ static InterpretResult run()
 #define READ_CONSTANT() (frame->closure->function->chunk.constants.values[READ_BYTE()])
 #define READ_CONSTANT_LONG() (frame->closure->function->chunk.constants.values[READ_24()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
+#define READ_STRING_LONG() AS_STRING(READ_CONSTANT_LONG())
 #define BINARY_OP(valueType, op) do \
 { \
 	if (!IS_NUMBER(peek(0))) \
@@ -386,6 +387,54 @@ static InterpretResult run()
 				break;
 			}
 
+			// properties
+			case OP_GET_PROPERTY:
+			case OP_GET_PROPERTY_LONG:
+			{
+				// guard against not accessing an instance
+				if (!IS_INSTANCE(peek(0)))
+				{
+					runtimeError("Only instances have properties.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				bool isLong = operation == OP_GET_PROPERTY_LONG;
+				ObjectInstance* instance = AS_INSTANCE(peek(0)); // cast
+				ObjectString* name = isLong ? READ_STRING_LONG() : READ_STRING();
+
+				Value value;
+				if (tableGet(&instance->fields, name, &value))
+				{
+					pop(); // Instance
+					push(value); //
+					break;
+				}
+				else
+				{
+					runtimeError("Undefined property '%s'.", name->chars);
+					return INTERPRET_RUNTIME_ERROR;
+				}
+			}
+			case OP_SET_PROPERTY:
+			case OP_SET_PROPERTY_LONG:
+			{
+				// guard against not accessing an instance
+				if (!IS_INSTANCE(peek(1)))
+				{
+					runtimeError("Only instances have fields.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
+				bool isLong = operation == OP_SET_PROPERTY_LONG;
+				ObjectInstance* instance = AS_INSTANCE(peek(1));
+				ObjectString* name = isLong ? READ_STRING_LONG() : READ_STRING();
+				tableSet(&instance->fields, name, peek(0));
+				Value value = pop(); // pop the result of the get
+				pop(); // pop the instance
+				push(value); // push the assigned value back to allow chaining
+				break;
+			}
+
 			// boolean
 			case OP_NOT: push(BOOL_VAL(isFalsey(pop()))); break;
 			case OP_EQUAL:
@@ -485,26 +534,12 @@ static InterpretResult run()
 				break;
 			}
 			case OP_CLOSURE:
-			{
-				ObjectFunction* function = AS_FUNCTION(READ_CONSTANT());
-				ObjectClosure* closure = newClosure(function);
-				push(OBJECT_VAL(closure));
-
-				// handle upvalues
-				for (uint32_t i = 0; i < closure->upvalueCount; ++i)
-				{
-					uint8_t isLocal = READ_BYTE();
-					uint8_t index = READ_BYTE();
-					if (isLocal)
-						closure->upvalues[i] = captureUpvalue(frame->slots + index);
-					else // is already captured
-						closure->upvalues[i] = frame->closure->upvalues[index];
-				}
-				break;
-			}
 			case OP_CLOSURE_LONG:
 			{
-				ObjectFunction* function = AS_FUNCTION(READ_CONSTANT_LONG());
+				bool isLong = operation == OP_CLOSURE_LONG;
+				ObjectFunction* function = isLong
+					? AS_FUNCTION(READ_CONSTANT_LONG())
+					: AS_FUNCTION(READ_CONSTANT());
 				ObjectClosure* closure = newClosure(function);
 				push(OBJECT_VAL(closure));
 

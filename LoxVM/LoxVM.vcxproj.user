@@ -6,7 +6,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-File|x64'">
-    <LocalDebuggerCommandArguments>stringCat.lox</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>classes.lox</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>..\LoxScripts</LocalDebuggerWorkingDirectory>
   </PropertyGroup>

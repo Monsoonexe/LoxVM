@@ -476,6 +476,30 @@ static void compileBinary(bool canAssign)
 	}
 }
 
+static void compileDot(bool canAssign)
+{
+	consume(TOKEN_IDENTIFIER, "Expected property name after '.'.");
+	uint32_t nameIndex = parseIdentifierConstant(&parser.previous);
+	uint8_t opCode = 0;
+
+	// assignment or call (setter or getter)?
+	if (canAssign && match(TOKEN_EQUAL)) // assignment
+	{
+		compileExpression();
+		opCode = nameIndex < UINT8_COUNT ? OP_SET_PROPERTY : OP_SET_PROPERTY_LONG;
+	}
+	else // call
+	{
+		opCode = nameIndex < UINT8_COUNT ? OP_GET_PROPERTY : OP_GET_PROPERTY_LONG;
+	}
+
+	// long or short instruction?
+	if (nameIndex >= UINT8_COUNT)
+		emitBytesLong(opCode, nameIndex);
+	else
+		emitBytes(opCode, nameIndex);
+}
+
 static void compileBreak(bool canAssign)
 {
 	consume(TOKEN_SEMICOLON, "Expected ';' after 'break'.");
@@ -824,7 +848,7 @@ static void compileNumber(bool canAssign)
 		emitByte(OP_ZERO);
 	else if (value == 1)
 		emitByte(OP_ONE);
-	else if (value == -1)
+	else if (value == -1) // never gets hit because the '-' is parsed before number
 		emitByte(OP_NEG_ONE);
 	else
 		emitConstant(NUMBER_VAL(value));
@@ -929,6 +953,7 @@ static void compileNamedVariable(Token name, bool canAssign)
 	}
 	else // global
 	{
+		// TODO - account for globals assigned an index > 256
 		arg = parseIdentifierConstant(&name);
 		getOp = OP_GET_GLOBAL;
 		setOp = OP_SET_GLOBAL;
@@ -950,7 +975,11 @@ static void compileNamedVariable(Token name, bool canAssign)
 	if (arg < UINT8_COUNT)
 		emitBytes(opCode, (uint8_t)arg);
 	else
-		emitBytesLong(opCode, (uint32_t)arg);
+	{
+		// should only get here if it's a global
+		error("Long variables are not supported yet. TODO.");
+		emitBytesLong(opCode + 1, (uint32_t)arg); // TODO - support LONG variant
+	}
 }
 
 static void compileVariable(bool canAssign)
@@ -981,7 +1010,7 @@ ParseRule rules[] =
   [TOKEN_LEFT_BRACE]	= {NULL,     NULL,   PREC_NONE},
   [TOKEN_RIGHT_BRACE]	= {NULL,     NULL,   PREC_NONE},
   [TOKEN_COMMA]			= {NULL,     NULL,   PREC_NONE},
-  [TOKEN_DOT]			= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_DOT]			= {NULL,     compileDot,   PREC_CALL},
   [TOKEN_MINUS]			= {compileUnary,    compileBinary, PREC_TERM},
   [TOKEN_PLUS]			= {NULL,     compileBinary, PREC_TERM},
   [TOKEN_SEMICOLON]		= {NULL,     NULL,   PREC_NONE},

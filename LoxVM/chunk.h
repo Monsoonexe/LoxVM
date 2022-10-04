@@ -14,7 +14,7 @@ typedef enum
 	// literals
 	OP_ZERO,
 	OP_ONE,
-	OP_NEG_ONE,
+	OP_NEG_ONE, // doesn't actually work
 	OP_NIL,
 	OP_TRUE,
 	OP_FALSE,
@@ -28,13 +28,37 @@ typedef enum
 	/// Pop 'n' items off the stack.
 	/// </summary>
 	OP_POPN,
+
+	/// <summary>
+	/// Supports up to 256 locals.
+	/// </summary>
 	OP_GET_LOCAL,
+
+	/// <summary>
+	/// Supports up to 256 locals.
+	/// </summary>
 	OP_SET_LOCAL,
 	OP_DEFINE_GLOBAL,
-	OP_GET_GLOBAL, // TODO - LONG
-	OP_SET_GLOBAL, // TODO - LONG
+	OP_GET_GLOBAL,
+	//OP_GET_GLOBAL_LONG, // TODO
+	OP_SET_GLOBAL,
+	//OP_SET_GLOBAL_LONG, // TODO
+
+	/// <summary>
+	/// Get a local from an enclosing scope.
+	/// </summary>
 	OP_GET_UPVALUE,
+
+	/// <summary>
+	/// Set a local from an enclosing scope.
+	/// </summary>
 	OP_SET_UPVALUE,
+
+	// properties
+	OP_GET_PROPERTY,
+	OP_GET_PROPERTY_LONG,
+	OP_SET_PROPERTY,
+	OP_SET_PROPERTY_LONG,
 
 	// assignment
 	OP_EQUAL,
