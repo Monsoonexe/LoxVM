@@ -200,7 +200,7 @@ static void advance()
 }
 
 /// <summary>
-/// Generates syntax errors.
+/// advance if token type matches, else generates syntax error.
 /// </summary>
 static void consume(TokenType type, const char* message)
 {
@@ -798,10 +798,31 @@ static void compileFunDeclaration()
 	defineVariable(global); //put function in variable
 }
 
+static void compileMethod()
+{
+	// identifier
+	consume(TOKEN_IDENTIFIER, "Expected method name.");
+	uint32_t constantIndex = parseIdentifierConstant(&parser.previous);
+
+	// closure body
+	FunctionType type = TYPE_FUNCTION;
+	compileFunction(type); // closure on stack
+
+	// emit bytecode
+	if (constantIndex >= UINT8_COUNT)
+		emitBytesLong(OP_METHOD_LONG, constantIndex);
+	else
+		emitBytes(OP_METHOD, constantIndex);
+
+
+	// bound class
+}
+
 static void compileClassDeclaration()
 {
 	// handle identifier
 	consume(TOKEN_IDENTIFIER, "Expected a class name.");
+	Token className = parser.previous;
 	uint8_t nameConstant = parseIdentifierConstant(&parser.previous);
 	declareVariable();
 
@@ -809,9 +830,17 @@ static void compileClassDeclaration()
 	emitBytes(OP_CLASS, nameConstant);
 	defineVariable(nameConstant);
 
+	// TODO - inheritance
+
+	// push onto stack for method declarations
+	compileNamedVariable(className, false);
+
 	// body
 	consume(TOKEN_LEFT_BRACE, "Expected '{' before class body.");
+	while (!(check(TOKEN_RIGHT_BRACE) || check(TOKEN_EOF)))
+		compileMethod();
 	consume(TOKEN_RIGHT_BRACE, "Expected '}' after class body.");
+	emitByte(OP_POP); // class 
 }
 
 static void compileDeclaration()

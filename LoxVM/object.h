@@ -106,6 +106,7 @@ struct ObjectClass
 {
 	Object object;
 	ObjectString* name;
+	Table methods;
 };
 
 struct ObjectInstance

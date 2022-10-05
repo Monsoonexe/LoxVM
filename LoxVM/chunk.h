@@ -108,6 +108,8 @@ typedef enum
 
 	// classes
 	OP_CLASS,
+	OP_METHOD,
+	OP_METHOD_LONG,
 
 } OpCode;
 

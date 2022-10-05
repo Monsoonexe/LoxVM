@@ -32,6 +32,9 @@ static void freeObject(Object* object)
 	{
 		case OBJECT_CLASS:
 		{
+			ObjectClass* klass = (ObjectClass*)object;
+			freeTable(&klass->methods);
+			klass->name = NULL; // GC will handle the string
 			FREE(ObjectClass, object);
 			break;
 		}
@@ -50,14 +53,15 @@ static void freeObject(Object* object)
 		{
 			ObjectFunction* function = (ObjectFunction*)object;
 			freeChunk(&function->chunk);
+			function->name = NULL; // GC will handle the string
 			FREE(ObjectFunction, object);
-			// GC will handle the 'name' string
 			break;
 		}
 		case OBJECT_INSTANCE:
 		{
 			ObjectInstance* instance = (ObjectInstance*)object;
 			freeTable(&instance->fields); // GC cleans up individual items in table
+			instance->_class = NULL; // gc cleans class up
 			FREE(ObjectInstance, object);
 			break;
 		}
@@ -129,6 +133,7 @@ static void blackenObject(Object* object)
 		{
 			ObjectClass* _class = (ObjectClass*)object;
 			markObject((Object*)_class->name);
+			markTable(&_class->methods);
 			break;
 		}
 		case OBJECT_CLOSURE:

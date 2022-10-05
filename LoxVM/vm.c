@@ -233,6 +233,14 @@ static void closeUpvalues(Value* last)
 	}
 }
 
+static void defineMethod(ObjectString* name)
+{
+	Value method = peek(0);
+	ObjectClass* klass = AS_CLASS(peek(1));
+	tableSet(&klass->methods, name, method);
+	pop(); // pop method, leave class
+}
+
 static bool isFalsey(Value value)
 {
 	return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
@@ -610,9 +618,13 @@ static InterpretResult run()
 				frame = &vm.callStack[count - 1]; // restore previous base pointer
 				break;
 			}
+
+			// classes
 			case OP_CLASS:
-				push(OBJECT_VAL(newClass(READ_STRING())));
-				break;
+				push(OBJECT_VAL(newClass(READ_STRING()))); break;
+			case OP_METHOD: defineMethod(READ_STRING()); break;
+			case OP_METHOD_LONG: defineMethod(READ_STRING_LONG()); break;
+
 			default:
 			{
 				runtimeError("Opcode not accounted for!");

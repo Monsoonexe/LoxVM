@@ -222,6 +222,11 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 		// classes
 		case OP_CLASS:
 			return constantInstruction("OP_CLASS", chunk, offset);
+		case OP_METHOD:
+			return constantInstruction("OP_METHOD", chunk, offset);
+		case OP_METHOD_LONG:
+			return constantLongInstruction("OP_METHOD_LONG", chunk, offset);
+
 		default:
 			printf("Unknown opcode %d\n", instruction);
 			return offset + 1;
