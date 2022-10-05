@@ -78,6 +78,14 @@ static void printFunction(ObjectFunction* function)
 		printf("<fn> %s>", function->name->chars);
 }
 
+ObjectBoundMethod* newBoundMethod(Value receiver, ObjectClosure* method)
+{
+	ObjectBoundMethod* boundMethod = ALLOCATE_OBJECT(ObjectBoundMethod, OBJECT_BOUND_METHOD);
+	boundMethod->receiver = receiver;
+	boundMethod->method = method;
+	return boundMethod;
+}
+
 ObjectClass* newClass(ObjectString* name)
 {
 	ObjectClass* _class = ALLOCATE_OBJECT(ObjectClass, OBJECT_CLASS);
@@ -162,6 +170,7 @@ void printObject(Value value)
 	ObjectType type = OBJECT_TYPE(value);
 	switch (type)
 	{
+	case OBJECT_BOUND_METHOD: printFunction(AS_BOUND_METHOD(value)->method->function); break;
 		case OBJECT_CLASS: printf("%s", AS_CLASS(value)->name->chars); break;
 		case OBJECT_CLOSURE: printFunction(AS_CLOSURE(value)->function); break;
 		case OBJECT_FUNCTION: printFunction(AS_FUNCTION(value)); break;
@@ -169,7 +178,7 @@ void printObject(Value value)
 			AS_INSTANCE(value)->_class->name->chars); break;
 		case OBJECT_NATIVE: printf("<native fn>"); break;
 		case OBJECT_STRING: printf("%s", AS_CSTRING(value)); break;
-		case OBJECT_UPVALUE: printf("upvalue");
+		case OBJECT_UPVALUE: printf("upvalue"); break;
 		default: exit(123); // unreachable
 	}
 }

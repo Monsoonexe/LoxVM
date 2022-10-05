@@ -28,14 +28,22 @@ static void freeObject(Object* object)
 	printf("%p free type %d\n", (void*)object, object->type);
 #endif
 
+	object->next = NULL;
 	switch (object->type)
 	{
+		case OBJECT_BOUND_METHOD:
+		{
+			ObjectBoundMethod* boundMethod = (ObjectBoundMethod*)object;
+			boundMethod->method = NULL;
+			FREE(ObjectBoundMethod, object); // free 'substruct'
+			break;
+		}
 		case OBJECT_CLASS:
 		{
 			ObjectClass* klass = (ObjectClass*)object;
 			freeTable(&klass->methods);
-			klass->name = NULL; // GC will handle the string
-			FREE(ObjectClass, object);
+			klass->name = NULL;
+			FREE(ObjectClass, object); // free 'substruct'
 			break;
 		}
 		case OBJECT_CLOSURE:
@@ -46,23 +54,23 @@ static void freeObject(Object* object)
 				closure->upvalueCount);
 
 			// free self
-			FREE(ObjectClosure, object);
+			FREE(ObjectClosure, object); // free 'substruct'
 			break;
 		}
 		case OBJECT_FUNCTION:
 		{
 			ObjectFunction* function = (ObjectFunction*)object;
 			freeChunk(&function->chunk);
-			function->name = NULL; // GC will handle the string
-			FREE(ObjectFunction, object);
+			function->name = NULL;
+			FREE(ObjectFunction, object); // free 'substruct'
 			break;
 		}
 		case OBJECT_INSTANCE:
 		{
 			ObjectInstance* instance = (ObjectInstance*)object;
 			freeTable(&instance->fields); // GC cleans up individual items in table
-			instance->_class = NULL; // gc cleans class up
-			FREE(ObjectInstance, object);
+			instance->_class = NULL; 
+			FREE(ObjectInstance, object); // free 'substruct'
 			break;
 		}
 		case OBJECT_STRING:
@@ -74,17 +82,21 @@ static void freeObject(Object* object)
 				// interned strings.
 				FREE_ARRAY(char, string->chars, string->length + 1); // null-term
 			}
+			string->chars = NULL;
 			FREE(ObjectString, object); // free 'substruct'
 			break;
 		}
 		case OBJECT_NATIVE:
 		{
-			FREE(ObjectNative, object);
+			FREE(ObjectNative, object); // free 'substruct'
 			break;
 		}
 		case OBJECT_UPVALUE:
 		{
-			FREE(ObjectUpvalue, object);
+			ObjectUpvalue* upvalue = (ObjectUpvalue*)object;
+			upvalue->location = NULL;
+			upvalue->next = NULL;
+			FREE(ObjectUpvalue, object); // free 'substruct'
 			break;
 		}
 		default: exit(123); // unreachable
@@ -129,6 +141,13 @@ static void blackenObject(Object* object)
 
 	switch (object->type)
 	{
+		case OBJECT_BOUND_METHOD:
+		{
+			ObjectBoundMethod* boundMethod = (ObjectBoundMethod*)object;
+			markValue(boundMethod->receiver);
+			markObject((Object*)boundMethod->method);
+			break;
+		}
 		case OBJECT_CLASS:
 		{
 			ObjectClass* _class = (ObjectClass*)object;

@@ -101,17 +101,18 @@ Parser parser;
 Compiler* current = NULL;
 
 // prototypes
-static void compileExpression();
-static void declareVariable();
-static ParseRule* getRule(TokenType type);
-static void parsePrecedence(Precedence precedence);
-static void compileStatement();
 static void compileDeclaration();
-static uint32_t parseVariable(const char* errorMessage);
-static bool identifiersEqual(Token* a, Token* b);
-static void defineVariable(uint32_t global);
-static uint32_t parseIdentifierConstant(Token* name);
+static void compileExpression();
+static void compileNamedVariable(Token name, bool canAssign);
+static void compileStatement();
 static void compileVarDeclaration();
+static void declareVariable();
+static void defineVariable(uint32_t global);
+static bool identifiersEqual(Token* a, Token* b);
+static ParseRule* getRule(TokenType type);
+static uint32_t parseIdentifierConstant(Token* name);
+static void parsePrecedence(Precedence precedence);
+static uint32_t parseVariable(const char* errorMessage);
 
 static void initCompiler(Compiler* compiler, FunctionType type)
 {

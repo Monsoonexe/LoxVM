@@ -9,7 +9,9 @@ typedef struct ObjectClosure ObjectClosure;
 typedef struct ObjectUpvalue ObjectUpvalue;
 typedef struct ObjectClass ObjectClass;
 typedef struct ObjectInstance ObjectInstance;
+typedef struct ObjectBoundMethod ObjectBoundMethod;
 
+// REMEMBER to modify to printValueFunctions table if modifying.
 typedef enum
 {
 	VAL_BOOL,
