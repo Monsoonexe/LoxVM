@@ -86,6 +86,9 @@ typedef enum
 	TYPE_SCRIPT,
 } FunctionType;
 
+/// <summary>
+/// A scope of execution.
+/// </summary>
 typedef struct Compiler
 {
 	struct Compiler* enclosing;
@@ -98,8 +101,22 @@ typedef struct Compiler
 	uint32_t scopeDepth;
 } Compiler;
 
+typedef struct ClassCompiler
+{
+	struct ClassCompiler* enclosing;
+} ClassCompiler;
+
 Parser parser;
+
+/// <summary>
+/// Current scope being compiled.
+/// </summary>
 Compiler* current = NULL;
+
+/// <summary>
+/// Current, innermost class being compiled.
+/// </summary>
+ClassCompiler* currentClass = NULL;
 
 // prototypes
 static void compileDeclaration();
@@ -523,6 +540,13 @@ static void compileBreak(bool canAssign)
 
 static void compileThis(bool canAssign)
 {
+	// guard against misuse of 'this'
+	if (currentClass == NULL)
+	{
+		error("Can't use 'this' outside of a class.");
+		return;
+	}
+
 	// 'this' is a reserved identifier
 	compileVariable(false); // can't assign to this
 }
@@ -849,6 +873,11 @@ static void compileClassDeclaration()
 	emitBytes(OP_CLASS, nameConstant);
 	defineVariable(nameConstant);
 
+	// enter class scope
+	ClassCompiler classCompiler; // hooray recursive descent!
+	classCompiler.enclosing = currentClass; //push compiler
+	currentClass = &classCompiler;
+
 	// TODO - inheritance
 
 	// push onto stack for method declarations
@@ -859,7 +888,10 @@ static void compileClassDeclaration()
 	while (!(check(TOKEN_RIGHT_BRACE) || check(TOKEN_EOF)))
 		compileMethod();
 	consume(TOKEN_RIGHT_BRACE, "Expected '}' after class body.");
-	emitByte(OP_POP); // class 
+	emitByte(OP_POP); // class
+
+	// exit class scope
+	currentClass = classCompiler.enclosing; // pop compiler
 }
 
 static void compileDeclaration()
