@@ -168,6 +168,11 @@ bool callValue(Value callee, uint8_t argCount)
 	{
 		switch (OBJECT_TYPE(callee))
 		{
+			case OBJECT_BOUND_METHOD:
+			{
+				ObjectBoundMethod* boundMethod = AS_BOUND_METHOD(callee);
+				return call(boundMethod->method, argCount);
+			}
 			case OBJECT_CLASS: // class constructor
 			{
 				ObjectClass* _class = AS_CLASS(callee);
@@ -189,6 +194,26 @@ bool callValue(Value callee, uint8_t argCount)
 	}
 	runtimeError("Can only call functions and classes.");
 	return false;
+}
+
+/// <summary>
+/// Binds a method to an Instance and replaces it on the stack.
+/// </summary>
+static bool bindMethod(ObjectClass* klass, ObjectString* name)
+{
+	Value method;
+	if (!tableGet(&klass->methods, name, &method))
+	{
+		runtimeError("Undefined property '%s'.", name->chars);
+		return false;
+	}
+
+	// bind the method
+	ObjectBoundMethod* boundMethod = newBoundMethod(
+		peek(0), AS_CLOSURE(method));
+	pop(); // owning class
+	push(OBJECT_VAL(boundMethod));
+	return true;
 }
 
 static ObjectUpvalue* captureUpvalue(Value* local)
@@ -410,6 +435,7 @@ static InterpretResult run()
 				ObjectInstance* instance = AS_INSTANCE(peek(0)); // cast
 				ObjectString* name = isLong ? READ_STRING_LONG() : READ_STRING();
 
+				// search fields
 				Value value;
 				if (tableGet(&instance->fields, name, &value))
 				{
@@ -417,11 +443,11 @@ static InterpretResult run()
 					push(value); //
 					break;
 				}
-				else
-				{
-					runtimeError("Undefined property '%s'.", name->chars);
+
+				// search methods
+				if (!bindMethod(instance->_class, name))
 					return INTERPRET_RUNTIME_ERROR;
-				}
+				break;
 			}
 			case OP_SET_PROPERTY:
 			case OP_SET_PROPERTY_LONG:

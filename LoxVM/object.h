@@ -121,7 +121,10 @@ struct ObjectInstance
 struct ObjectBoundMethod
 {
 	Object object;
-	Value receiver; // this
+	/// <summary>
+	/// 'this' object to which it is bound.
+	/// </summary>
+	Value receiver;
 	ObjectClosure* method;
 };
 
