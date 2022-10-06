@@ -171,6 +171,7 @@ bool callValue(Value callee, uint8_t argCount)
 			case OBJECT_BOUND_METHOD:
 			{
 				ObjectBoundMethod* boundMethod = AS_BOUND_METHOD(callee);
+				stackTop()[-argCount - 1] = boundMethod->receiver; // put 'this' in slot[0]
 				return call(boundMethod->method, argCount);
 			}
 			case OBJECT_CLASS: // class constructor

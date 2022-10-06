@@ -82,6 +82,7 @@ typedef struct
 typedef enum
 {
 	TYPE_FUNCTION,
+	TYPE_METHOD,
 	TYPE_SCRIPT,
 } FunctionType;
 
@@ -106,6 +107,7 @@ static void compileExpression();
 static void compileNamedVariable(Token name, bool canAssign);
 static void compileStatement();
 static void compileVarDeclaration();
+static void compileVariable(bool canAssign);
 static void declareVariable();
 static void defineVariable(uint32_t global);
 static bool identifiersEqual(Token* a, Token* b);
@@ -137,8 +139,18 @@ static void initCompiler(Compiler* compiler, FunctionType type)
 	Local* local = &current->locals[current->localCount++];
 	local->depth = 0;
 	local->isCaptured = false;
-	local->name.start = "";
-	local->name.length = 0;
+
+	// identifier
+	if (type != TYPE_FUNCTION) // store reference to 'this'
+	{
+		local->name.start = "this";
+		local->name.length = 4;
+	}
+	else // store reference to the function being called.
+	{
+		local->name.start = "";
+		local->name.length = 0;
+	}
 }
 
 static Chunk* currentChunk()
@@ -509,6 +521,12 @@ static void compileBreak(bool canAssign)
 	//TODO - verify is inside loop
 }
 
+static void compileThis(bool canAssign)
+{
+	// 'this' is a reserved identifier
+	compileVariable(false); // can't assign to this
+}
+
 static void compileTrue(bool canAssign)
 {
 	emitByte(OP_TRUE);
@@ -806,7 +824,7 @@ static void compileMethod()
 	uint32_t constantIndex = parseIdentifierConstant(&parser.previous);
 
 	// closure body
-	FunctionType type = TYPE_FUNCTION;
+	FunctionType type = TYPE_METHOD;
 	compileFunction(type); // closure on stack
 
 	// emit bytecode
@@ -1072,7 +1090,7 @@ ParseRule rules[] =
   [TOKEN_PRINT]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_RETURN]		= {NULL,     NULL,   PREC_NONE},
   [TOKEN_SUPER]			= {NULL,     NULL,   PREC_NONE},
-  [TOKEN_THIS]			= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_THIS]			= {compileThis,     NULL,   PREC_NONE},
   [TOKEN_TRUE]			= {compileTrue,     NULL,   PREC_NONE},
   [TOKEN_VAR]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_WHILE]			= {NULL,     NULL,   PREC_NONE},
