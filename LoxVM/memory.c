@@ -244,6 +244,9 @@ void markValue(Value value)
 		markObject(AS_OBJECT(value));
 }
 
+/// <summary>
+/// Marks VM roots.
+/// </summary>
 static void markRoots()
 {
 	// mark stack array
@@ -263,6 +266,7 @@ static void markRoots()
 
 	markTable(&vm.globals);
 	markCompilerRoots();
+	markObject((Object*)vm.initString);
 }
 
 void* reallocate(void* pointer, size_t oldSize, size_t newSize)

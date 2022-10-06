@@ -41,6 +41,7 @@ void freeVM(VM* vm)
 	freeValueArray(&vm->stack);
 
 	// force GC
+	vm->initString = NULL;
 	freeObjects(vm->objects);
 
 	freeTable(&vm->strings);
@@ -71,6 +72,10 @@ void initVM(VM* vm)
 	initValueArray(&vm->stack);
 	initTable(&vm->strings);
 	initTable(&vm->globals);
+
+	// constant strings
+	vm->initString = NULL; // zero-memory in case copyString runs GC
+	vm->initString = copyString(INIT_STRING, INIT_STRING_LENGTH);
 }
 
 /// <summary>
@@ -178,6 +183,19 @@ bool callValue(Value callee, uint8_t argCount)
 			{
 				ObjectClass* _class = AS_CLASS(callee);
 				stackTop()[-argCount - 1] = OBJECT_VAL(newInstance(_class));
+
+				// initializer
+				Value initializer;
+				if (tableGet(&_class->methods, vm.initString, &initializer))
+				{
+					return call(AS_CLOSURE(initializer), argCount);
+				}
+				else if (argCount != 0) // disallow passing args to a class with no initializer
+				{
+					runtimeError("Expected 0 arguments (no initializer defined) but got %d.",
+						argCount);
+				}
+
 				return true;
 			}
 			case OBJECT_CLOSURE: return call(AS_CLOSURE(callee), argCount);

@@ -7,6 +7,8 @@
 
 #define FRAMES_MAX 64
 
+#define INIT_STRING "init"
+
 #define STACK_DEFAULT (FRAMES_MAX * 256)
 
 typedef struct
@@ -55,6 +57,11 @@ typedef struct
 	/// Hash set of interned strings. 'value' is always 'nil' and meaningless.
 	/// </summary>
 	Table strings;
+
+	/// <summary>
+	/// Cached string of 'init' for a class initializer.
+	/// </summary>
+	ObjectString* initString;
 
 	/// <summary>
 	/// Linked-list of upvalues that are still on the stack.
