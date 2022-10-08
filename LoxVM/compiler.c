@@ -315,7 +315,7 @@ static void emitConstant(Value value)
 
 	// emit constant
 	uint32_t i = addConstant(currentChunk(), value);
-	if (i == 0) // special case for 'this'
+	if (i == 0) // special case for 0 for fun optimization
 	{
 		emitByte(OP_CONSTANT_ZERO);
 	}

@@ -52,7 +52,7 @@ uint32_t writeConstant(Chunk* chunk, Value value, uint32_t line)
 {
 	uint32_t index = addConstant(chunk, value);
 
-	if (index == 0) // special case for 0, which is often 'this' or 'mySelf'
+	if (index == 0) // special case for 0 for fun optimization
 	{
 		writeChunk(chunk, OP_CONSTANT_ZERO, line);
 	}
