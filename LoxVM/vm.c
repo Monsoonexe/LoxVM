@@ -128,6 +128,9 @@ Value pop()
 	return vm.stack.values[--vm.stack.count];
 }
 
+/// <summary>
+/// Points to the top (uninitialized) of the stack.
+/// </summary>
 inline Value* stackTop()
 {
 	return &vm.stack.values[vm.stack.count];
@@ -139,6 +142,7 @@ static Value peek(uint32_t distance)
 	return vm.stack.values[top - distance];
 }
 
+/// <returns>False if a runtime error ocurred.</returns>
 static bool call(ObjectClosure* closure, uint8_t argCount)
 {
 	ObjectFunction* function = closure->function; // fetch once
@@ -162,8 +166,9 @@ static bool call(ObjectClosure* closure, uint8_t argCount)
 	frame->closure = closure;
 	frame->ip = function->chunk.code;
 	// slots are function name and parameters
-	frame->slots = &vm.stack.values[vm.stack.count - argCount - 1];
-	frame->stackOffset = vm.stack.count - 2; // account for function and return value
+	uint32_t stackSize = vm.stack.count - argCount - 1;
+	frame->slots = &vm.stack.values[stackSize];
+	frame->stackOffset = stackSize; // 
 	return true;
 }
 
@@ -194,6 +199,7 @@ bool callValue(Value callee, uint8_t argCount)
 				{
 					runtimeError("Expected 0 arguments (no initializer defined) but got %d.",
 						argCount);
+					return false;
 				}
 
 				return true;
