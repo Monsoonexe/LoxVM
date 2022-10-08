@@ -82,6 +82,7 @@ typedef struct
 typedef enum
 {
 	TYPE_FUNCTION,
+	TYPE_INITIALIZER,
 	TYPE_METHOD,
 	TYPE_SCRIPT,
 } FunctionType;
@@ -319,7 +320,8 @@ static void emitConstant(Value value)
 	{
 		emitByte(OP_CONSTANT_ZERO);
 	}
-	else if (i >= UINT8_COUNT)
+	else
+		if (i >= UINT8_COUNT)
 	{	// long (24-bit) index
 		emitBytesLong(OP_CONSTANT_LONG, i);
 	}
@@ -370,11 +372,17 @@ static void emitLoop(uint32_t loopStart)
 }
 
 /// <summary>
-/// Emits nil and return.
+/// Emits an appropriate implicit value, nil or this, and returns.
 /// </summary>
 static void emitReturn()
 {
-	emitByte(OP_NIL);
+	// implicitly return value based on type
+	if (current->type == TYPE_INITIALIZER)
+		emitBytes(OP_GET_LOCAL, 0); // 'this'
+	else
+		emitByte(OP_NIL); // 'nil'
+
+	// 'return' 
 	emitByte(OP_RETURN);
 }
 
@@ -733,15 +741,18 @@ static void compileReturnStatement()
 	// just return;
 	if (match(TOKEN_SEMICOLON))
 	{
-		// implicitly return 'nil'
+		// return an implicit value
 		emitReturn();
+		return; // TODO - is this right?
 	}
-	else // return a value;
+	else if (current->type == TYPE_INITIALIZER)
 	{
-		compileExpression(); // compile returned value
-		consume(TOKEN_SEMICOLON, "Expected ';' after return value.");
-		emitByte(OP_RETURN);
+		error("Returning a value from an initializer is not allowed.");
 	}
+
+	compileExpression(); // compile returned value
+	consume(TOKEN_SEMICOLON, "Expected ';' after return value.");
+	emitByte(OP_RETURN);
 }
 
 static void compileStatement()
@@ -853,6 +864,13 @@ static void compileMethod()
 
 	// closure body
 	FunctionType type = TYPE_METHOD;
+
+	if (parser.previous.length == INIT_STRING_LENGTH
+		&& memcmp(parser.previous.start, INIT_STRING, INIT_STRING_LENGTH) == 0)
+	{
+		type = TYPE_INITIALIZER;
+	}
+
 	compileFunction(type); // closure on stack
 
 	// emit bytecode

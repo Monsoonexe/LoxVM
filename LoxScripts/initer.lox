@@ -1,0 +1,16 @@
+class Klass
+{
+    myMethod()
+    {
+        return "myMethod";
+    }
+
+    someMethod()
+    {
+        var x = "bye";
+    }
+}
+
+var k = Klass();
+print k.myMethod();
+print k.someMethod();

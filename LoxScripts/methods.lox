@@ -1,20 +1,33 @@
 class Scone {
-  topping(first, second) {
+  topping(first, second)
+  {
     print "scone with " + first + " and " + second;
+    return "a";
+  }
+  meth2()
+  {
+    this.derp = "DERP";
   }
 }
 
 var scone = Scone();
 scone.topping("berries", "cream"); // "scone with berries and cream"
+scone.meth2();
 
-class Nested {
-  method() {
-    fun function() {
+class Nested
+{
+  method()
+  {
+    fun function()
+    {
       print this;
     }
 
     function();
   }
+
 }
 
 Nested().method(); // "nested instance"
+scone.meth2();
+print scone.derp;
