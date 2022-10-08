@@ -632,6 +632,7 @@ static InterpretResult run()
 				// is program complete
 				if (count == 0)
 				{
+					pop(); // pop <script>
 					if (IS_BOOL(result))
 					{
 						// 'true' indicates 'success' and 'false' indicates 'failure'.

@@ -25,7 +25,7 @@ typedef struct
 	uint8_t* ip; // return address
 
 	/// <summary>
-	/// Frame pointer;
+	/// Frame pointer. Points to top (uninitialized memory).
 	/// </summary>
 	Value* slots; // frame pointer locals and args?
 
