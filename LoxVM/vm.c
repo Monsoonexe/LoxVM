@@ -368,6 +368,9 @@ static InterpretResult run()
 			// constants
 			case OP_CONSTANT: push(READ_CONSTANT()); break;
 			case OP_CONSTANT_LONG: push(READ_CONSTANT_LONG()); break;// function works, macro doesn't
+			case OP_CONSTANT_ZERO:
+				push(frame->closure->function->chunk.constants.values[0]);
+				break;
 
 			// literals
 			case OP_ZERO: push(NUMBER_VAL(0)); break;

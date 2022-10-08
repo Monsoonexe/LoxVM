@@ -8,6 +8,7 @@
 #define FRAMES_MAX 64
 
 #define INIT_STRING "init"
+#define INIT_STRING_LENGTH  4
 
 #define STACK_DEFAULT (FRAMES_MAX * 256)
 

@@ -98,6 +98,8 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 			return constantInstruction("OP_CONSTANT", chunk, offset);
 		case OP_CONSTANT_LONG:
 			return constantLongInstruction("OP_CONSTANT_LONG", chunk, offset);
+		case OP_CONSTANT_ZERO:
+			return simpleInstruction("OP_CONSTANT_ZERO", offset);
 
 		// literals
 		case OP_ZERO:

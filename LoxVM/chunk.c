@@ -45,11 +45,18 @@ void writeChunk(Chunk* chunk, uint8_t byte, uint32_t line)
 	chunk->lines[count] = line;
 }
 
+/// <summary>
+/// Not production code.
+/// </summary>
 uint32_t writeConstant(Chunk* chunk, Value value, uint32_t line)
 {
 	uint32_t index = addConstant(chunk, value);
 
-	if (index <= UINT8_MAX) // single-byte locater
+	if (index == 0) // special case for 0, which is often 'this' or 'mySelf'
+	{
+		writeChunk(chunk, OP_CONSTANT_ZERO, line);
+	}
+	else if (index <= UINT8_MAX) // single-byte locater
 	{
 		writeChunk(chunk, OP_CONSTANT, line);
 		writeChunk(chunk, (uint8_t)index, line);

@@ -315,7 +315,11 @@ static void emitConstant(Value value)
 
 	// emit constant
 	uint32_t i = addConstant(currentChunk(), value);
-	if (i >= UINT8_COUNT)
+	if (i == 0) // special case for 'this'
+	{
+		emitByte(OP_CONSTANT_ZERO);
+	}
+	else if (i >= UINT8_COUNT)
 	{	// long (24-bit) index
 		emitBytesLong(OP_CONSTANT_LONG, i);
 	}

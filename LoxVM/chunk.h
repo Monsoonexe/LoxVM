@@ -10,6 +10,7 @@ typedef enum
 	// constants
 	OP_CONSTANT,
 	OP_CONSTANT_LONG,
+	OP_CONSTANT_ZERO,
 
 	// literals
 	OP_ZERO,
