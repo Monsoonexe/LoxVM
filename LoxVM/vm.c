@@ -734,6 +734,14 @@ static InterpretResult run()
 			case OP_INHERIT:
 			{
 				Value superclass = peek(1);
+
+				// verify self-respecting user code
+				if (!IS_CLASS(superclass))
+				{
+					runtimeError("Can only inherit from a class.");
+					return INTERPRET_RUNTIME_ERROR;
+				}
+
 				ObjectClass* subclass = AS_CLASS(peek(0));
 
 				// copy-down inheritance
