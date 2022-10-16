@@ -221,6 +221,45 @@ bool callValue(Value callee, uint8_t argCount)
 	return false;
 }
 
+static bool invokeFromClass(ObjectClass* klass, ObjectString* name, uint8_t argCount)
+{
+	Value method;
+
+	if (!tableGet(&klass->methods, name, &method))
+	{
+		runtimeError("Undefined property '%s'.", name->chars);
+		return false;
+	}
+
+	// items are already on the stack where they belong
+	return call(AS_CLOSURE(method), argCount);
+}
+
+static bool invoke(ObjectString* name, uint8_t argCount)
+{
+	Value receiver = peek(argCount); // instance is item preceding args
+
+	// validate proper use
+	if (!IS_INSTANCE(receiver))
+	{
+		runtimeError("Only instances have methods.");
+		return false;
+	}
+
+	ObjectInstance* instance = AS_INSTANCE(receiver);
+
+	// handle function stored in a field being called correctly
+	Value value;
+	if (tableGet(&instance->fields, name, &value))
+	{
+		stackTop()[-argCount - 1] = value; // replace instance with callee on stack
+		return callValue(value, argCount);
+	}
+
+	// invoke method
+	return invokeFromClass(instance->_class, name, argCount);
+}
+
 /// <summary>
 /// Binds a method to an Instance and replaces it on the stack.
 /// </summary>
@@ -593,6 +632,21 @@ static InterpretResult run()
 				if (!callValue(peek(argCount), argCount))
 					return INTERPRET_RUNTIME_ERROR;
 				frame = &vm.callStack[vm.frameCount - 1]; // set base pointer
+				break;
+			}
+			case OP_INVOKE:
+			{
+				// get operands
+				ObjectString* method = READ_STRING();
+				uint8_t argCount = READ_BYTE();
+
+				// invoke method with args
+				if (!invoke(method, argCount))
+					return INTERPRET_RUNTIME_ERROR;
+
+				// reset base pointer
+				frame = &vm.callStack[vm.frameCount - 1];
+
 				break;
 			}
 			case OP_CLOSURE:

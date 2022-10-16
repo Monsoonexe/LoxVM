@@ -96,6 +96,12 @@ typedef enum
 	/// </summary>
 	OP_CALL,
 
+	/// <summary>
+	/// Instance method call. 
+	/// A combination of OP_GET_PROPERTY and OP_CALL.
+	/// </summary>
+	OP_INVOKE,
+
 	OP_CLOSURE,
 	OP_CLOSURE_LONG,
 

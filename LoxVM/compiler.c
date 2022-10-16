@@ -120,6 +120,7 @@ Compiler* current = NULL;
 ClassCompiler* currentClass = NULL;
 
 // prototypes
+static uint8_t compileArgumentList();
 static void compileDeclaration();
 static void compileExpression();
 static void compileNamedVariable(Token name, bool canAssign);
@@ -530,6 +531,13 @@ static void compileDot(bool canAssign)
 		compileExpression();
 		opCode = nameIndex < UINT8_COUNT ? OP_SET_PROPERTY : OP_SET_PROPERTY_LONG;
 	}
+	else if (match(TOKEN_LEFT_PAREN)) // instance method call
+	{
+		uint8_t argCount = compileArgumentList();
+		emitByte(OP_INVOKE);
+		emitByte(nameIndex);
+		emitByte(argCount);
+	}
 	else // call
 	{
 		opCode = nameIndex < UINT8_COUNT ? OP_GET_PROPERTY : OP_GET_PROPERTY_LONG;
@@ -865,6 +873,7 @@ static void compileMethod()
 	// closure body
 	FunctionType type = TYPE_METHOD;
 
+	// is previous token "init"
 	if (parser.previous.length == INIT_STRING_LENGTH
 		&& memcmp(parser.previous.start, INIT_STRING, INIT_STRING_LENGTH) == 0)
 	{
