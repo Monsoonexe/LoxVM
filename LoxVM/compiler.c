@@ -909,7 +909,21 @@ static void compileClassDeclaration()
 	classCompiler.enclosing = currentClass; //push compiler
 	currentClass = &classCompiler;
 
-	// TODO - inheritance
+	// inheritance
+	if (match(TOKEN_LESS))
+	{
+		consume(TOKEN_IDENTIFIER, "Expected superclass name.");
+
+		// push superclass onto stack
+		compileVariable(false);
+
+		// validate not inheriting from self
+		if (identifiersEqual(&className, &parser.previous))
+			error("A class can't inherit from iteself.");
+
+		compileNamedVariable(className, false);
+		emitByte(OP_INHERIT);
+	}
 
 	// push onto stack for method declarations
 	compileNamedVariable(className, false);

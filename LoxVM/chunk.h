@@ -115,6 +115,7 @@ typedef enum
 
 	// classes
 	OP_CLASS,
+	OP_INHERIT,
 	OP_METHOD,
 	OP_METHOD_LONG,
 

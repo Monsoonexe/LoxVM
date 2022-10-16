@@ -731,6 +731,18 @@ static InterpretResult run()
 			// classes
 			case OP_CLASS:
 				push(OBJECT_VAL(newClass(READ_STRING()))); break;
+			case OP_INHERIT:
+			{
+				Value superclass = peek(1);
+				ObjectClass* subclass = AS_CLASS(peek(0));
+
+				// copy-down inheritance
+				copyTable(&AS_CLASS(superclass)->methods,
+					&subclass->methods);
+
+				pop(); // subclass
+				break;
+			}
 			case OP_METHOD: defineMethod(READ_STRING()); break;
 			case OP_METHOD_LONG: defineMethod(READ_STRING_LONG()); break;
 
