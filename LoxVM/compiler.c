@@ -105,6 +105,7 @@ typedef struct Compiler
 typedef struct ClassCompiler
 {
 	struct ClassCompiler* enclosing;
+	bool hasSuperclass;
 } ClassCompiler;
 
 Parser parser;
@@ -907,6 +908,7 @@ static void compileClassDeclaration()
 	// enter class scope
 	ClassCompiler classCompiler; // hooray recursive descent!
 	classCompiler.enclosing = currentClass; //push compiler
+	classCompiler.hasSuperclass = false; // for now
 	currentClass = &classCompiler;
 
 	// inheritance
@@ -921,8 +923,15 @@ static void compileClassDeclaration()
 		if (identifiersEqual(&className, &parser.previous))
 			error("A class can't inherit from iteself.");
 
+		// support 'super'
+		beginScope();
+		addLocal(syntheticToken("super"));
+		defineVariable(0);
+
+		//
 		compileNamedVariable(className, false);
 		emitByte(OP_INHERIT);
+		classCompiler.hasSuperclass = true;
 	}
 
 	// push onto stack for method declarations
@@ -934,6 +943,10 @@ static void compileClassDeclaration()
 		compileMethod();
 	consume(TOKEN_RIGHT_BRACE, "Expected '}' after class body.");
 	emitByte(OP_POP); // class
+
+	// pop inheritance scope
+	if (classCompiler.hasSuperclass)
+		endScope(); // discard 'super' variable
 
 	// exit class scope
 	currentClass = classCompiler.enclosing; // pop compiler
@@ -1110,6 +1123,14 @@ static void compileNamedVariable(Token name, bool canAssign)
 static void compileVariable(bool canAssign)
 {
 	compileNamedVariable(parser.previous, canAssign);
+}
+
+static Token syntheticToken(const char* text)
+{
+	Token token;
+	token.start = text;
+	token.length = (uint32_t)strlen(text);
+	return token;
 }
 
 static void compileUnary(bool canAssign)
