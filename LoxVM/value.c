@@ -25,6 +25,15 @@ static void printNumberValue(Value value)
 	printf("%g", AS_NUMBER(value));
 }
 
+void initValueArray(ValueArray* array)
+{
+	array->values = NULL;
+	array->capacity = 0;
+	array->count = 0;
+}
+
+#ifndef NAN_BOXING
+
 PrintValueFn printValueFunctions[] =
 {
 	[VAL_BOOL] = { printBoolValue },
@@ -33,23 +42,45 @@ PrintValueFn printValueFunctions[] =
 	[VAL_OBJECT] = { printObject }
 };
 
-void initValueArray(ValueArray* array)
-{
-	array->values = NULL;
-	array->capacity = 0;
-	array->count = 0;
-}
+#endif
 
 void printValue(Value value)
 {
+#ifdef NAN_BOXING
+	if (IS_BOOL(value))
+	{
+		printf(AS_BOOL(value) ? "true" : "false");
+	}
+	else if (IS_NIL(value))
+	{
+		printf("nil");
+	}
+	else if (IS_NUMBER(value))
+	{
+		printf("%g", AS_NUMBER(value));
+	}
+	else if (IS_OBJECT(value))
+	{
+		printObject(value);
+	}
+	else
+	{
+		exit(123);
+	}
+#else
 	// lookup table (instead of switch-case)
 	ValueType type = value.type;
 	PrintValueFn printer = printValueFunctions[type];
 	printer(value);
+#endif
 }
 
 bool valuesEqual(Value a, Value b)
 {
+#ifdef NAN_BOXING
+	return a == b;
+
+#else
 	if (a.type != b.type)
 		return false;
 
@@ -61,7 +92,9 @@ bool valuesEqual(Value a, Value b)
 		case VAL_OBJECT: return AS_OBJECT(a) == AS_OBJECT(b);
 		default: exit(123); // unreachable;
 	}
+#endif
 }
+
 
 void writeValueArray(ValueArray* array, Value value)
 {
