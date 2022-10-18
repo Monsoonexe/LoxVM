@@ -1,0 +1,31 @@
+class Super
+{
+    init()
+    {
+        this.hello = "Hello";
+    }
+
+    Loggit()
+    {
+        print this.hello;
+    }
+}
+
+class Duper < Super
+{
+    init()
+    {
+        super.init();
+        this.world = " world";
+    }
+
+    Loggit()
+    {
+        super.Loggit();
+        print this.world;
+    }
+
+}
+
+var subject = Duper();
+subject.Loggit();

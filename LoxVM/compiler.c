@@ -121,6 +121,7 @@ Compiler* current = NULL;
 ClassCompiler* currentClass = NULL;
 
 // prototypes
+static void addLocal(Token name);
 static uint8_t compileArgumentList();
 static void compileDeclaration();
 static void compileExpression();
@@ -135,6 +136,7 @@ static ParseRule* getRule(TokenType type);
 static uint32_t parseIdentifierConstant(Token* name);
 static void parsePrecedence(Precedence precedence);
 static uint32_t parseVariable(const char* errorMessage);
+static Token syntheticToken(const char* text);
 
 static void initCompiler(Compiler* compiler, FunctionType type)
 {
@@ -544,7 +546,7 @@ static void compileDot(bool canAssign)
 		opCode = nameIndex < UINT8_COUNT ? OP_GET_PROPERTY : OP_GET_PROPERTY_LONG;
 	}
 
-	// long or short instruction?
+	// emit long or short instruction?
 	if (nameIndex >= UINT8_COUNT)
 		emitBytesLong(opCode, nameIndex);
 	else
@@ -557,6 +559,39 @@ static void compileBreak(bool canAssign)
 	// emitJump
 	//TODO - figure out how many bytes are between me and end of loop and push that many
 	//TODO - verify is inside loop
+}
+
+static void compileSuper(bool canAssign)
+{
+	// validate
+	if (currentClass == NULL)
+		error("Using 'super' outside of a class is not allowed.");
+	else if (!currentClass->hasSuperclass)
+		error("Cannot use 'super' in a class with no superclass.");
+
+	// parse
+	consume(TOKEN_DOT, "Expected '.' after 'super'.");
+	consume(TOKEN_IDENTIFIER, "Expected superclass method name.");
+	uint8_t name = parseIdentifierConstant(&parser.previous); // 'super' is always at global scope 0
+
+	// compile ('super.' is really 'this.super.')
+	compileNamedVariable(syntheticToken("this"), false); // receiver
+
+	// calling or getting method?
+	if (match(TOKEN_LEFT_PAREN)) // calling
+	{
+		uint8_t argCount = compileArgumentList();
+		compileNamedVariable(syntheticToken("super"), false);
+		emitByte(OP_SUPER_INVOKE);
+		emitByte(name);
+		emitByte(argCount);
+	}
+	else // getting
+	{
+		// is getting a method but not invoking it (rare)
+		compileNamedVariable(syntheticToken("super"), false);
+		emitBytes(OP_GET_SUPER, name);
+	}
 }
 
 static void compileThis(bool canAssign)
@@ -1073,6 +1108,11 @@ static int32_t resolveUpvalue(Compiler* compiler, Token* name)
 	return -1; // flag not found. check global?
 }
 
+/// <summary>
+/// Compiles code to look up a named variable.
+/// </summary>
+/// <param name="name"></param>
+/// <param name="canAssign"></param>
 static void compileNamedVariable(Token name, bool canAssign)
 {
 	uint8_t getOp, setOp; // opcode to be emitted
@@ -1149,8 +1189,7 @@ static void compileUnary(bool canAssign)
 	}
 }
 
-ParseRule rules[] =
-{
+ParseRule rules[] = {
   [TOKEN_LEFT_PAREN]	= {compileGrouping, compileCall,   PREC_CALL},
   [TOKEN_RIGHT_PAREN]	= {NULL,     NULL,   PREC_NONE},
   [TOKEN_LEFT_BRACE]	= {NULL,     NULL,   PREC_NONE},
@@ -1187,7 +1226,7 @@ ParseRule rules[] =
   [TOKEN_OR]			= {NULL,     compileOr,   PREC_OR},
   [TOKEN_PRINT]			= {NULL,     NULL,   PREC_NONE},
   [TOKEN_RETURN]		= {NULL,     NULL,   PREC_NONE},
-  [TOKEN_SUPER]			= {NULL,     NULL,   PREC_NONE},
+  [TOKEN_SUPER]			= {compileSuper,    NULL,   PREC_NONE},
   [TOKEN_THIS]			= {compileThis,     NULL,   PREC_NONE},
   [TOKEN_TRUE]			= {compileTrue,     NULL,   PREC_NONE},
   [TOKEN_VAR]			= {NULL,     NULL,   PREC_NONE},

@@ -12,6 +12,7 @@
 
 // prototypes
 static void defineNativeFunction(const char* name, NativeFn function);
+inline CallFrame* currentCallFrame();
 
 VM vm;
 
@@ -93,7 +94,7 @@ static void runtimeError(const char* format, ...)
 	// stack trace
 	for (int32_t i = vm.frameCount - 1; i >= 0; --i)
 	{
-		CallFrame* frame = &vm.callStack[vm.frameCount - 1];
+		CallFrame* frame = currentCallFrame();
 		ObjectFunction* function = frame->closure->function;
 		size_t instruction = frame->ip - function->chunk.code - 1; // prev instruction is culprit
 		uint32_t line = function->chunk.lines[instruction];
@@ -136,10 +137,14 @@ inline Value* stackTop()
 	return &vm.stack.values[vm.stack.count];
 }
 
-static Value peek(uint32_t distance)
+inline CallFrame* currentCallFrame()
 {
-	uint32_t top = vm.stack.count - 1;
-	return vm.stack.values[top - distance];
+	return &vm.callStack[vm.frameCount - 1];
+}
+
+inline Value peek(uint32_t distance)
+{
+	return vm.stack.values[vm.stack.count - 1 - distance];
 }
 
 /// <returns>False if a runtime error ocurred.</returns>
@@ -356,7 +361,7 @@ static void concatenate()
 
 static InterpretResult run()
 {
-	CallFrame* frame = &vm.callStack[vm.frameCount - 1];
+	CallFrame* frame = currentCallFrame();
 
 #define READ_BYTE() (*(frame->ip++))
 #define READ_16() \
@@ -471,6 +476,17 @@ static InterpretResult run()
 					runtimeError("Undefined variable '%s'.", name->chars);
 					return INTERPRET_RUNTIME_ERROR;
 				}
+				break;
+			}
+			case OP_GET_SUPER:
+			{
+				ObjectString* name = READ_STRING(); // member of super
+				ObjectClass* superclass = AS_CLASS(pop());
+
+				// 'super' always resolves to a method, since fields are not inherited
+				if (!bindMethod(superclass, name))
+					return INTERPRET_RUNTIME_ERROR;
+
 				break;
 			}
 			case OP_GET_UPVALUE:
@@ -631,7 +647,7 @@ static InterpretResult run()
 				uint8_t argCount = READ_BYTE();
 				if (!callValue(peek(argCount), argCount))
 					return INTERPRET_RUNTIME_ERROR;
-				frame = &vm.callStack[vm.frameCount - 1]; // set base pointer
+				frame = currentCallFrame(); // reset base pointer
 				break;
 			}
 			case OP_INVOKE:
@@ -645,8 +661,21 @@ static InterpretResult run()
 					return INTERPRET_RUNTIME_ERROR;
 
 				// reset base pointer
-				frame = &vm.callStack[vm.frameCount - 1];
+				frame = currentCallFrame();
 
+				break;
+			}
+			case OP_SUPER_INVOKE:
+			{
+				// get operands
+				ObjectString* method = READ_STRING();
+				uint8_t argCount = READ_BYTE();
+				ObjectClass* superclass = AS_CLASS(pop());
+
+				if (!invokeFromClass(superclass, method, argCount))
+					return INTERPRET_RUNTIME_ERROR;
+
+				frame = currentCallFrame(); // reset base pointer
 				break;
 			}
 			case OP_CLOSURE:

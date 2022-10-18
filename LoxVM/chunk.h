@@ -8,8 +8,20 @@
 typedef enum
 {
 	// constants
+
+	/// <summary>
+	/// Push a constant onto the stack.
+	/// </summary>
 	OP_CONSTANT,
+
+	/// <summary>
+	/// Push a constant onto the stack.
+	/// </summary>
 	OP_CONSTANT_LONG,
+
+	/// <summary>
+	/// Push the constant '0' onto the stack.
+	/// </summary>
 	OP_CONSTANT_ZERO,
 
 	// literals
@@ -44,6 +56,11 @@ typedef enum
 	//OP_GET_GLOBAL_LONG, // TODO
 	OP_SET_GLOBAL,
 	//OP_SET_GLOBAL_LONG, // TODO
+
+	/// <summary>
+	/// Access a method from a super class.
+	/// </summary>
+	OP_GET_SUPER,
 
 	/// <summary>
 	/// Get a local from an enclosing scope.
@@ -101,6 +118,12 @@ typedef enum
 	/// A combination of OP_GET_PROPERTY and OP_CALL.
 	/// </summary>
 	OP_INVOKE,
+
+	/// <summary>
+	/// Invoke a method on an instance's super class.
+	/// A combination of OP_GET_SUPER and OP_CALL.
+	/// </summary>
+	OP_SUPER_INVOKE,
 
 	OP_CLOSURE,
 	OP_CLOSURE_LONG,

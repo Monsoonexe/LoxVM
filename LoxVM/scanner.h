@@ -1,5 +1,9 @@
 #pragma once
 
+/*	NOTE: Add new Tokens to 'ParseRules rules[]'
+*	to preserve 'index-iness'
+*/
+
 typedef enum {
 	// Single-character tokens.
 	TOKEN_LEFT_PAREN, TOKEN_RIGHT_PAREN,

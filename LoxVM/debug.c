@@ -148,6 +148,8 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 			return constantInstruction("OP_GET_GLOBAL", chunk, offset);
 		case OP_SET_GLOBAL:
 			return constantInstruction("OP_SET_GLOBAL", chunk, offset);
+		case OP_GET_SUPER:
+			return constantInstruction("OP_GET_SUPER", chunk, offset);
 		case OP_GET_UPVALUE:
 			return byteInstruction("OP_GET_UPVALUE", chunk, offset);
 		case OP_SET_UPVALUE:
@@ -198,6 +200,8 @@ uint32_t disassembleInstruction(Chunk* chunk, uint32_t offset)
 			return byteInstruction("OP_CALL", chunk, offset);
 		case OP_INVOKE:
 			return invokeInstruction("OP_INVOKE", chunk, offset);
+		case OP_SUPER_INVOKE:
+			return invokeInstruction("OP_SUPER_INVOKE", chunk, offset);
 		case OP_CLOSURE:
 		{
 			offset++;
