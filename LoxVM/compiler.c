@@ -735,7 +735,6 @@ static void compileForStatement()
 	{
 		compileExpressionStatement();
 	}
-	consume(TOKEN_SEMICOLON, "Expected ';'.");
 
 	// condition clause
 	uint32_t loopStart = currentChunk()->count;
